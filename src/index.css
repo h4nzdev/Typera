@@ -56,4 +56,32 @@
   .border-glow-pink {
     box-shadow: 0 0 5px var(--color-neon-pink-muted), inset 0 0 5px var(--color-neon-pink-muted);
   }
+
+  @keyframes pop-fade {
+    0% { 
+      transform: scale(1.6) translateY(-4px); 
+      text-shadow: 0 0 20px var(--color-neon-green), 0 0 40px var(--color-neon-green);
+      opacity: 0.8;
+    }
+    100% { 
+      transform: scale(1) translateY(0); 
+      text-shadow: 0 0 5px var(--color-neon-green);
+      opacity: 1;
+    }
+  }
+  
+  .animate-pop-fade {
+    display: inline-block;
+    animation: pop-fade 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+  
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); filter: hue-rotate(90deg); }
+    40%, 80% { transform: translateX(8px); filter: hue-rotate(-90deg); }
+  }
+  
+  .animate-shake {
+    animation: shake 0.3s ease-in-out;
+  }
 }

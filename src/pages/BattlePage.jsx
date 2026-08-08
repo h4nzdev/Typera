@@ -72,6 +72,17 @@ const BattlePage = () => {
     }
   }, [battlePhase]);
 
+  // Block Ctrl+R and F5
+  useEffect(() => {
+    const handleKeyDownGlobal = (e) => {
+      if ((e.ctrlKey && e.key.toLowerCase() === 'r') || e.key === 'F5') {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDownGlobal);
+    return () => window.removeEventListener('keydown', handleKeyDownGlobal);
+  }, []);
+
   // Run Countdown
   useEffect(() => {
     if (battlePhase === 'countdown') {
@@ -98,10 +109,9 @@ const BattlePage = () => {
     }
   }, [battlePhase]);
 
-  // Opponent Finish Observer
+  // Check for opponent finish
   useEffect(() => {
-    if (battlePhase === 'playing' && opponentStats.progress >= 100) {
-      // Opponent finished first, we lose!
+    if (opponentStats.progress === 100 && battlePhase === 'playing') {
       endGame(false);
     }
   }, [opponentStats.progress, battlePhase, endGame]);
@@ -139,6 +149,7 @@ const BattlePage = () => {
 
     if (hasTypos) {
       playSound('error');
+      triggerShake();
       return;
     }
 
@@ -158,6 +169,7 @@ const BattlePage = () => {
 
       if (nextChar !== expectedChar) {
         playSound('error');
+        triggerShake();
         statsRef.current.errors += 1;
         newCombo = 0;
         setCombo(0);
@@ -319,14 +331,10 @@ const BattlePage = () => {
         </div>
         
         {/* Main Battle Section */}
-        <div className="flex gap-6 xl:gap-10 w-full items-stretch flex-grow my-8">
-          <OpponentActivity 
-             progress={opponentStats.progress} 
-             wpm={opponentStats.wpm} 
-             accuracy={opponentStats.accuracy} 
-             combo={opponentStats.combo} 
-          />
-          <div className="flex-1 flex flex-col justify-center">
+        <div className={`flex flex-col lg:flex-row items-start justify-center gap-8 z-10 w-full max-w-6xl transition-transform ${shake ? 'animate-shake' : ''}`}>
+          
+          {/* Main Typing Section */}
+          <div className="flex-1 w-full max-w-4xl flex flex-col items-center">
             <TypingText text={SAMPLE_TEXT} typed={typed} />
           </div>
           <ComboDisplay combo={combo} best={combo} />
@@ -341,6 +349,22 @@ const BattlePage = () => {
             combo={`×${combo}`} 
           />
           <VirtualKeyboard pressedKey={pressedKey} />
+        </div>
+      </div>
+
+      {/* Badges UI - Bottom Left */}
+      <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 z-20 flex gap-4 pointer-events-none">
+        {[1, 2, 3].map((badge) => (
+          <div key={badge} className="w-10 h-10 md:w-14 md:h-14 rounded-full border-2 border-[var(--color-neon-cyan)] bg-black/50 flex items-center justify-center shadow-[0_0_10px_var(--color-neon-cyan-muted),inset_0_0_10px_var(--color-neon-cyan-muted)]">
+            <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-[var(--color-neon-cyan-muted)]"></div>
+          </div>
+        ))}
+      </div>
+
+      {/* Trophy UI - Bottom Right */}
+      <div className="absolute bottom-4 md:bottom-8 right-4 md:right-8 z-20 flex items-center justify-center pointer-events-none">
+        <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl border-2 border-[var(--color-neon-yellow)] bg-yellow-900/30 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(255,251,0,0.4),inset_0_0_10px_rgba(255,251,0,0.2)]">
+          <span className="text-xl md:text-3xl filter drop-shadow-[0_0_5px_rgba(255,251,0,0.8)]">🏆</span>
         </div>
       </div>
     </div>

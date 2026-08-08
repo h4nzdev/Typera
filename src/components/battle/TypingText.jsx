@@ -52,7 +52,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog and ru
                     let className = "";
                     
                     if (state === 'correct') {
-                      className = "text-[var(--color-neon-green)]";
+                      className = "text-[var(--color-neon-green)] animate-pop-fade";
                     } else if (state === 'incorrect') {
                       className = "text-[var(--color-neon-red)] bg-red-900/40";
                     } else if (state === 'current') {
@@ -62,7 +62,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog and ru
                     }
                     
                     return (
-                      <span key={absIndex} className={`px-[1px] ${className}`}>
+                      <span key={absIndex} className={`px-[1px] relative ${className}`}>
                         {char}
                       </span>
                     );
@@ -75,7 +75,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog and ru
                     let className = "";
                     
                     if (state === 'correct') {
-                      className = "text-[var(--color-neon-green)]";
+                      className = "text-[var(--color-neon-green)] animate-pop-fade";
                     } else if (state === 'incorrect') {
                       className = "text-[var(--color-neon-red)] bg-red-900/40";
                     } else if (state === 'current') {

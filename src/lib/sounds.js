@@ -23,6 +23,16 @@ const sounds = {
     src: [base64Beep],
     volume: 0.7,
     rate: 0.8,
+  }),
+  hover: new Howl({
+    src: [base64Beep],
+    volume: 0.1,
+    rate: 2.5, // tiny fast tick
+  }),
+  click: new Howl({
+    src: [base64Beep],
+    volume: 0.4,
+    rate: 1.5, // satisfying confirmation click
   })
 };
 
