@@ -23,6 +23,12 @@ const BattlePage = () => {
   const [startTime, setStartTime] = useState(null);
   const [pressedKey, setPressedKey] = useState(null);
   const [combo, setCombo] = useState(0);
+  const [shake, setShake] = useState(false);
+
+  const triggerShake = useCallback(() => {
+    setShake(true);
+    setTimeout(() => setShake(false), 300);
+  }, []);
   
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
@@ -250,6 +256,23 @@ const BattlePage = () => {
     return () => clearInterval(interval);
   }, [isMatchActive, timeLeft, startTime, broadcastStats, typed, accuracy, combo, opponentStats.progress, endGame]);
 
+  const handleRestart = () => {
+    playSound('click');
+    setTyped('');
+    setStartTime(null);
+    setPressedKey(null);
+    setCombo(0);
+    setWpm(0);
+    setAccuracy(100);
+    setTimeLeft(MATCH_DURATION);
+    setIsMatchActive(false);
+    setBattlePhase('waiting');
+    setLocalReady(false);
+    statsRef.current = { totalKeystrokes: 0, errors: 0 };
+    maxComboRef.current = 0;
+    broadcastStats({ progress: 0, wpm: 0, accuracy: 100, combo: 0 });
+  };
+
   const progress = Math.min(100, Math.round((typed.length / SAMPLE_TEXT.length) * 100)) || 0;
   
   const formatTime = (seconds) => {
@@ -341,7 +364,7 @@ const BattlePage = () => {
         </div>
         
         {/* Bottom Section */}
-        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-8 mt-auto pb-4">
+        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-4 mt-auto pb-4 relative z-30">
           <StatsPanel 
             wpm={wpm.toString()} 
             accuracy={`${accuracy}%`} 
@@ -349,6 +372,11 @@ const BattlePage = () => {
             combo={`×${combo}`} 
           />
           <VirtualKeyboard pressedKey={pressedKey} />
+          <div className="mt-4 flex gap-4">
+            <ArcadeButton color="pink" className="text-sm px-6 py-2" onClick={handleRestart}>
+              FORFEIT & RESTART
+            </ArcadeButton>
+          </div>
         </div>
       </div>
 

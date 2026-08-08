@@ -137,9 +137,32 @@ const SoloPracticePage = () => {
   useEffect(() => {
     if (typed.length > 0 && typed.length === SAMPLE_TEXT.length) {
       setIsMatchActive(false);
-      setTimeout(() => navigate('/result'), 1000);
+      setTimeout(() => {
+        navigate('/result', {
+          state: {
+            isWinner: true,
+            wpm,
+            accuracy,
+            maxCombo: 0, // Solo doesn't track maxCombo easily here without ref, but 0 is fine for now
+            mode: 'solo'
+          }
+        });
+      }, 1000);
     }
-  }, [typed, navigate]);
+  }, [typed, navigate, wpm, accuracy]);
+
+  const handleRestart = () => {
+    playSound('click');
+    setTyped('');
+    setStartTime(null);
+    setPressedKey(null);
+    setCombo(0);
+    setWpm(0);
+    setAccuracy(100);
+    setTimeLeft(MATCH_DURATION);
+    setIsMatchActive(false);
+    statsRef.current = { totalKeystrokes: 0, errors: 0 };
+  };
 
   const progress = Math.min(100, Math.round((typed.length / SAMPLE_TEXT.length) * 100)) || 0;
   
@@ -174,7 +197,7 @@ const SoloPracticePage = () => {
         </div>
         
         {/* Bottom Section */}
-        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-8 mt-auto pb-4">
+        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-4 mt-auto pb-4 relative z-30">
           <StatsPanel 
             wpm={wpm.toString()} 
             accuracy={`${accuracy}%`} 
@@ -182,6 +205,11 @@ const SoloPracticePage = () => {
             combo={`×${combo}`} 
           />
           <VirtualKeyboard pressedKey={pressedKey} />
+          <div className="mt-4">
+            <ArcadeButton color="pink" className="text-sm px-6 py-2" onClick={handleRestart}>
+              RESTART
+            </ArcadeButton>
+          </div>
         </div>
       </div>
     </div>

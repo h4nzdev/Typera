@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import ArcadeText from '../components/arcade/ArcadeText';
 import ArcadeButton from '../components/arcade/ArcadeButton';
 import { supabase } from '../lib/supabase';
+import useMatchStore from '../store/useMatchStore';
 
 const MatchResultPage = () => {
   const navigate = useNavigate();
@@ -114,15 +115,32 @@ const MatchResultPage = () => {
             </div>
           )}
 
-          <div className="result-btns flex flex-col sm:flex-row gap-6">
-            <ArcadeButton color="cyan" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/battle')} disabled={isSaving}>
+          <div className="result-btns flex flex-wrap justify-center gap-4 md:gap-6 mt-4">
+            <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
+              if (matchData.mode === 'solo') {
+                navigate('/practice');
+              } else {
+                useMatchStore.getState().resetMatch();
+                navigate('/battle');
+              }
+            }} disabled={isSaving}>
               PLAY AGAIN
             </ArcadeButton>
-            <ArcadeButton color="pink" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/create')} disabled={isSaving}>
+            <ArcadeButton color="pink" className="whitespace-nowrap" onClick={() => {
+              const { isHost, leaveMatch } = useMatchStore.getState();
+              leaveMatch();
+              navigate(isHost ? '/create' : '/join');
+            }} disabled={isSaving}>
               NEW MATCH
             </ArcadeButton>
-            <ArcadeButton color="purple" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/leaderboard')} disabled={isSaving}>
+            <ArcadeButton color="purple" className="whitespace-nowrap" onClick={() => navigate('/leaderboard')} disabled={isSaving}>
               LEADERBOARD
+            </ArcadeButton>
+            <ArcadeButton color="white" className="whitespace-nowrap text-white border-white hover:bg-white/10 text-shadow-none shadow-none text-glow-none border-glow-none" onClick={() => {
+              useMatchStore.getState().leaveMatch();
+              navigate('/');
+            }} disabled={isSaving}>
+              MAIN MENU
             </ArcadeButton>
           </div>
         </div>

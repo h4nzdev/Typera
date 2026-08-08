@@ -93,6 +93,14 @@ const useMatchStore = create((set, get) => ({
     set({ matchCode: null, channel: null, players: [], status: 'lobby' });
   },
 
+  resetMatch: () => {
+    set({ 
+      opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0 },
+      localReady: false,
+      opponentReady: false
+    });
+  },
+
   broadcastStats: async (stats) => {
     const { channel, myId } = get();
     if (channel) {
