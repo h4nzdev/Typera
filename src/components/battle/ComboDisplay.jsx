@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import ArcadeText from '../arcade/ArcadeText';
 
-const ComboDisplay = ({ combo = 0, best = 0 }) => {
+const ComboDisplay = ({ combo = 0, best = 0, heldPowerUp = null }) => {
   const comboRef = useRef(null);
 
   useEffect(() => {
@@ -33,25 +33,49 @@ const ComboDisplay = ({ combo = 0, best = 0 }) => {
   else if (combo === 0) statusText = "";
 
   return (
-    <div className="w-56 border border-[var(--color-neon-pink-muted)] rounded-xl p-6 bg-black/40 flex flex-col items-center justify-center gap-2 shrink-0">
+    <div className="w-56 border border-[var(--color-neon-pink-muted)] rounded-xl p-6 bg-black/40 flex flex-col items-center justify-center gap-2 shrink-0 relative overflow-hidden">
       <ArcadeText color="pink" className="text-sm tracking-widest">COMBO</ArcadeText>
       
-      <div ref={comboRef} className="origin-center inline-block">
+      <div ref={comboRef} className="origin-center inline-block z-10">
         <ArcadeText color="yellow" glow className="text-6xl my-2">
           x{combo}
         </ArcadeText>
       </div>
       
-      <div className="h-4 flex items-center justify-center">
+      <div className="h-4 flex items-center justify-center z-10">
         <ArcadeText color="yellow" className="text-xs tracking-widest text-center">
           {statusText}
         </ArcadeText>
       </div>
 
-      <div className="w-full h-[1px] bg-white/10 my-4"></div>
+      {/* Power-up Progress Bar */}
+      <div className="w-full h-2 bg-black/60 border border-[var(--color-neon-purple-muted)] rounded-full mt-2 overflow-hidden z-10">
+        <div 
+          className="h-full bg-gradient-to-r from-[var(--color-neon-purple)] to-[var(--color-neon-pink)] transition-all duration-300"
+          style={{ width: `${(combo % 20) * 5}%` }}
+        ></div>
+      </div>
+      <div className="text-[10px] text-[var(--color-neon-purple)] font-[family-name:var(--font-arcade)] z-10 mb-2">
+        {combo > 0 && combo % 20 === 0 ? 'POWER READY!' : 'POWER PROGRESS'}
+      </div>
 
-      <ArcadeText color="white" className="text-[10px] text-gray-400">BEST</ArcadeText>
-      <ArcadeText color="purple" glow className="text-xl">x{best}</ArcadeText>
+      {/* Held Power-Up */}
+      {heldPowerUp && (
+        <div className="w-full p-2 border border-[var(--color-neon-cyan)] bg-black/50 rounded-lg flex flex-col items-center justify-center gap-1 z-10 animate-pulse">
+          <ArcadeText color="cyan" className="text-[10px]">PRESS [ENTER]</ArcadeText>
+          <ArcadeText color="white" glow className="text-sm uppercase tracking-widest">{heldPowerUp}</ArcadeText>
+        </div>
+      )}
+
+      <div className="w-full h-[1px] bg-white/10 my-2 z-10"></div>
+
+      <ArcadeText color="white" className="text-[10px] text-gray-400 z-10">BEST</ArcadeText>
+      <ArcadeText color="purple" glow className="text-xl z-10">x{best}</ArcadeText>
+      
+      {/* Background Glow if full */}
+      {combo > 0 && combo % 20 === 0 && (
+        <div className="absolute inset-0 bg-[var(--color-neon-pink)] opacity-10 animate-pulse pointer-events-none"></div>
+      )}
     </div>
   );
 };

@@ -28,6 +28,20 @@ const useMatchStore = create((set, get) => ({
   challengeText: '',
   category: 'all',
   isPaused: false,
+  activeDebuff: null,
+
+  setActiveDebuff: (debuff) => set({ activeDebuff: debuff }),
+
+  sendPowerUp: async (type) => {
+    const { channel } = get();
+    if (channel) {
+      await channel.send({
+        type: 'broadcast',
+        event: 'match_powerup',
+        payload: { type }
+      });
+    }
+  },
 
   setCategory: (category) => {
     const { isHost, channel } = get();
@@ -43,11 +57,11 @@ const useMatchStore = create((set, get) => ({
     }
   },
 
-  setPaused: (paused) => {
+  setPaused: async (paused) => {
     set({ isPaused: paused });
     const { channel } = get();
     if (channel) {
-      channel.send({
+      await channel.send({
         type: 'broadcast',
         event: 'match_pause',
         payload: { isPaused: paused }
@@ -105,6 +119,19 @@ const useMatchStore = create((set, get) => ({
         connectedPlayers.sort((a, b) => (a.isHost === b.isHost) ? 0 : a.isHost ? -1 : 1);
         
         set({ players: connectedPlayers });
+
+        const hasHost = connectedPlayers.some(p => p.isHost);
+        const currentStatus = get().status;
+
+        if (connectedPlayers.length < 2) {
+            if (currentStatus === 'playing') {
+                set({ status: 'opponent_surrendered' });
+            } else if (currentStatus === 'starting') {
+                set({ status: 'cancelled' });
+            } else if (currentStatus === 'lobby' && !hasHost && !get().isHost) {
+                set({ status: 'cancelled' });
+            }
+        }
         
         // Auto-start transition if 2 players are in the lobby
         if (connectedPlayers.length === 2 && get().status === 'lobby') {
@@ -126,6 +153,16 @@ const useMatchStore = create((set, get) => ({
       })
       .on('broadcast', { event: 'match_pause' }, (payload) => {
         set({ isPaused: payload.payload.isPaused });
+      })
+      .on('broadcast', { event: 'match_powerup' }, (payload) => {
+        const type = payload.payload.type;
+        const duration = type === 'blind' ? 3000 : 2000;
+        set({ activeDebuff: { type, endsAt: Date.now() + duration } });
+        setTimeout(() => {
+          if (get().activeDebuff?.type === type) {
+            set({ activeDebuff: null });
+          }
+        }, duration);
       })
       .on('broadcast', { event: 'player_ready' }, (payload) => {
         if (payload.payload.id !== get().myId) {

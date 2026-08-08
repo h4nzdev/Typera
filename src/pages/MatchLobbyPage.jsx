@@ -37,6 +37,17 @@ const MatchLobbyPage = () => {
     <div className="min-h-screen flex flex-col items-center justify-center relative bg-black/50">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,243,255,0.05)_0%,transparent_60%)] pointer-events-none"></div>
       
+      {/* Cancelled Modal Overlay */}
+      {status === 'cancelled' && (
+        <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center backdrop-blur-sm">
+          <ArcadeText color="red" glow className="text-5xl md:text-7xl mb-4 text-center">MATCH CANCELLED</ArcadeText>
+          <ArcadeText color="pink" className="text-xl mb-8 tracking-widest text-center">HOST DISCONNECTED</ArcadeText>
+          <ArcadeButton color="cyan" onClick={() => { useMatchStore.getState().leaveMatch(); navigate('/'); }}>
+            MAIN MENU
+          </ArcadeButton>
+        </div>
+      )}
+
       <div className="w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-12 z-10 p-8">
         
         {/* Player 1 (Host) */}

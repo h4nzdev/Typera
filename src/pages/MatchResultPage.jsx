@@ -91,11 +91,13 @@ const MatchResultPage = () => {
 
       <div className="z-10 flex flex-col items-center text-center gap-8">
         <div className="result-title flex flex-col items-center gap-4">
-          <ArcadeText as="h1" color={isWinner ? 'cyan' : 'red'} glow className="text-6xl md:text-8xl">
-            {isWinner ? 'VICTORY!' : 'DEFEAT!'}
+          <ArcadeText as="h1" color={matchData.mode === 'solo' ? 'cyan' : (isWinner ? 'cyan' : 'red')} glow className="text-6xl md:text-8xl">
+            {matchData.mode === 'solo' ? 'COMPLETE!' : (isWinner ? 'VICTORY!' : 'DEFEAT!')}
           </ArcadeText>
           <ArcadeText color="white" className="text-2xl tracking-widest">
-            {isWinner ? (submitted ? `${playerName || 'PLAYER 1'} WINS` : 'PLAYER 1 WINS') : 'YOU LOSE!'}
+            {matchData.mode === 'solo' 
+              ? 'PRACTICE SESSION FINISHED' 
+              : (isWinner ? (matchData.surrendered ? 'OPPONENT SURRENDERED' : (submitted ? `${playerName || 'PLAYER 1'} WINS` : 'PLAYER 1 WINS')) : 'YOU LOSE!')}
           </ArcadeText>
         </div>
 

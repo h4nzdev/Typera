@@ -26,13 +26,16 @@ const BattlePage = () => {
     broadcastStats,
     challengeText,
     isPaused,
-    setPaused
+    setPaused,
+    status,
+    activeDebuff
   } = useMatchStore();
   
   const [typed, setTyped] = useState('');
   const [startTime, setStartTime] = useState(null);
   const [pressedKey, setPressedKey] = useState(null);
   const [combo, setCombo] = useState(0);
+  const [heldPowerUp, setHeldPowerUp] = useState(null);
   const [shake, setShake] = useState(false);
 
   const triggerShake = useCallback(() => {
@@ -52,7 +55,7 @@ const BattlePage = () => {
   const maxComboRef = useRef(0);
 
   // Helper to transition to results
-  const endGame = useCallback((isWinner) => {
+  const endGame = useCallback((isWinner, isSurrender = false) => {
     setIsMatchActive(false);
     setBattlePhase('finished');
     
@@ -62,6 +65,7 @@ const BattlePage = () => {
     navigate('/result', {
       state: {
         isWinner,
+        surrendered: isSurrender,
         wpm,
         accuracy: finalAccuracy,
         maxCombo: maxComboRef.current,
@@ -77,17 +81,15 @@ const BattlePage = () => {
     }
   }, [localReady, opponentReady, battlePhase]);
 
-  // Block the back button during gameplay
+  // Block the back button during the entire battle sequence
   useEffect(() => {
-    if (battlePhase === 'playing') {
+    window.history.pushState(null, "", window.location.pathname);
+    const handlePopState = () => {
       window.history.pushState(null, "", window.location.pathname);
-      const handlePopState = () => {
-        window.history.pushState(null, "", window.location.pathname);
-      };
-      window.addEventListener("popstate", handlePopState);
-      return () => window.removeEventListener("popstate", handlePopState);
-    }
-  }, [battlePhase]);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   // Block Ctrl+R and F5
   useEffect(() => {
@@ -118,6 +120,7 @@ const BattlePage = () => {
         } else {
           clearInterval(countInterval);
           setBattlePhase('playing');
+          useMatchStore.getState().updateMatchStatus('playing');
           setStartTime(Date.now());
           setIsMatchActive(true);
         }
@@ -126,16 +129,69 @@ const BattlePage = () => {
     }
   }, [battlePhase]);
 
-  // Check for opponent finish
+  // Check for opponent finish or surrender
   useEffect(() => {
     if (opponentStats.progress === 100 && battlePhase === 'playing') {
       endGame(false);
     }
   }, [opponentStats.progress, battlePhase, endGame]);
 
+  useEffect(() => {
+    if (status === 'opponent_surrendered' && battlePhase === 'playing') {
+      // Opponent left the match, you win!
+      endGame(true, true);
+    }
+  }, [status, battlePhase, endGame]);
+
+  // Handle Steal Debuff
+  useEffect(() => {
+    if (activeDebuff?.type === 'steal' && battlePhase === 'playing') {
+      playSound('error');
+      triggerShake();
+      setTyped(prev => {
+        const next = prev.slice(0, Math.max(0, prev.length - 3));
+        let correctCount = 0;
+        for (let i = 0; i < next.length; i++) {
+          if (next[i] === challengeText[i]) correctCount++;
+          else break;
+        }
+        const newProgress = Math.min(100, Math.round((correctCount / challengeText.length) * 100)) || 0;
+        broadcastStats({ progress: newProgress, wpm, accuracy, combo });
+        return next;
+      });
+      useMatchStore.getState().setActiveDebuff(null);
+    }
+  }, [activeDebuff, battlePhase, triggerShake, challengeText, wpm, accuracy, combo, broadcastStats]);
+
   const handleKeyDown = useCallback((e) => {
     // Prevent spacebar from scrolling the page
     if (e.key === ' ') e.preventDefault();
+
+    if (e.key === 'Enter' && heldPowerUp) {
+      playSound('click');
+      useMatchStore.getState().sendPowerUp(heldPowerUp);
+      if (heldPowerUp === 'steal') {
+         setTyped(prev => {
+           let next = prev;
+           for (let i = 0; i < 3; i++) {
+             if (next.length < challengeText.length) {
+               next += challengeText[next.length];
+             }
+           }
+           const newProgress = Math.min(100, Math.round((next.length / challengeText.length) * 100)) || 0;
+           broadcastStats({ progress: newProgress, wpm, accuracy, combo });
+           return next;
+         });
+      }
+      setHeldPowerUp(null);
+      return;
+    }
+
+    if (activeDebuff?.type === 'glitch') {
+      playSound('error');
+      triggerShake();
+      return;
+    }
 
     if (isPaused) return;
     if (battlePhase !== 'playing') return;
@@ -195,6 +251,13 @@ const BattlePage = () => {
         newCombo = combo + 1;
         maxComboRef.current = Math.max(maxComboRef.current, newCombo);
         if (newCombo > 0 && newCombo % 10 === 0) playSound('combo');
+        
+        // Power-Up Generation
+        if (newCombo > 0 && newCombo % 20 === 0 && !heldPowerUp) {
+          const types = ['glitch', 'blind', 'steal'];
+          setHeldPowerUp(types[Math.floor(Math.random() * types.length)]);
+          playSound('start'); // Notify player!
+        }
       }
       setCombo(newCombo);
       
@@ -276,6 +339,8 @@ const BattlePage = () => {
     setTimeLeft(MATCH_DURATION);
     setIsMatchActive(false);
     setPaused(false);
+    setHeldPowerUp(null);
+    useMatchStore.getState().setActiveDebuff(null);
     setBattlePhase('waiting');
     setLocalReady(false);
     statsRef.current = { totalKeystrokes: 0, errors: 0 };
@@ -307,9 +372,20 @@ const BattlePage = () => {
               RESTART
             </ArcadeButton>
             <ArcadeButton color="white" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>
-              MAIN MENU
+              {battlePhase === 'playing' ? 'SURRENDER' : 'MAIN MENU'}
             </ArcadeButton>
           </div>
+        </div>
+      )}
+
+      {/* Cancelled Modal Overlay */}
+      {status === 'cancelled' && (
+        <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center backdrop-blur-sm">
+          <ArcadeText color="red" glow className="text-5xl md:text-7xl mb-4 text-center">MATCH CANCELLED</ArcadeText>
+          <ArcadeText color="pink" className="text-xl mb-8 tracking-widest text-center">HOST DISCONNECTED</ArcadeText>
+          <ArcadeButton color="cyan" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>
+            MAIN MENU
+          </ArcadeButton>
         </div>
       )}
 
@@ -395,10 +471,17 @@ const BattlePage = () => {
           </div>
 
           {/* Main Typing Section */}
-          <div className="flex-1 w-full max-w-4xl flex flex-col items-center">
-            <TypingText text={challengeText} typed={typed} />
+          <div className="flex-1 w-full max-w-4xl flex flex-col items-center relative">
+            {activeDebuff?.type === 'glitch' && (
+              <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+                 <ArcadeText color="red" glow className="text-4xl md:text-6xl animate-ping-once bg-black/80 px-8 py-4 rounded-xl border border-red-500 shadow-[0_0_20px_red]">KEYBOARD LOCKED!</ArcadeText>
+              </div>
+            )}
+            <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-md opacity-30' : ''}`}>
+              <TypingText text={challengeText} typed={typed} />
+            </div>
           </div>
-          <ComboDisplay combo={combo} best={combo} />
+          <ComboDisplay combo={combo} best={maxComboRef.current} heldPowerUp={heldPowerUp} />
         </div>
         
         {/* Bottom Section */}
