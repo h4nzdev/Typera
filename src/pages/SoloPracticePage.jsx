@@ -24,7 +24,8 @@ const MATCH_DURATION = 60; // 60 seconds match
 
 const SoloPracticePage = () => {
   const navigate = useNavigate();
-  const [challengeText, setChallengeText] = useState(() => generateChallenge(15));
+  const [category, setCategory] = useState('all');
+  const [challengeText, setChallengeText] = useState(() => generateChallenge(15, 'all'));
   const [typed, setTyped] = useState('');
   const [startTime, setStartTime] = useState(null);
   const [pressedKey, setPressedKey] = useState(null);
@@ -173,7 +174,7 @@ const SoloPracticePage = () => {
 
   const handleRestart = () => {
     playSound('click');
-    setChallengeText(generateChallenge(15));
+    setChallengeText(generateChallenge(15, category));
     setTyped('');
     setStartTime(null);
     setPressedKey(null);
@@ -183,6 +184,21 @@ const SoloPracticePage = () => {
     setTimeLeft(MATCH_DURATION);
     setIsMatchActive(false);
     setIsPaused(false);
+    statsRef.current = { totalKeystrokes: 0, errors: 0 };
+    maxComboRef.current = 0;
+  };
+
+  const handleCategoryChange = (c) => {
+    playSound('click');
+    setCategory(c);
+    setChallengeText(generateChallenge(15, c));
+    setTyped('');
+    setStartTime(null);
+    setCombo(0);
+    setWpm(0);
+    setAccuracy(100);
+    setTimeLeft(MATCH_DURATION);
+    setIsMatchActive(false);
     statsRef.current = { totalKeystrokes: 0, errors: 0 };
     maxComboRef.current = 0;
   };
@@ -246,6 +262,22 @@ const SoloPracticePage = () => {
             combo={`×${combo}`} 
           />
           <VirtualKeyboard pressedKey={pressedKey} />
+
+          {/* Category Selector */}
+          <div className="flex flex-col items-center gap-2 mt-4 opacity-50 hover:opacity-100 transition-opacity">
+            <span className="text-[var(--color-neon-pink)] font-[family-name:var(--font-arcade)] text-xs tracking-widest">CATEGORY</span>
+            <div className="flex gap-2">
+              {['all', 'common', 'it', 'gaming', 'tech', 'fun'].map(c => (
+                <button 
+                  key={c}
+                  onClick={() => handleCategoryChange(c)}
+                  className={`px-2 py-1 font-[family-name:var(--font-arcade)] text-[10px] border ${category === c ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)]' : 'border-gray-700 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

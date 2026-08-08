@@ -24,7 +24,9 @@ const BattlePage = () => {
     opponentReady, 
     setLocalReady, 
     broadcastStats,
-    challengeText
+    challengeText,
+    isPaused,
+    setPaused
   } = useMatchStore();
   
   const [typed, setTyped] = useState('');
@@ -32,8 +34,6 @@ const BattlePage = () => {
   const [pressedKey, setPressedKey] = useState(null);
   const [combo, setCombo] = useState(0);
   const [shake, setShake] = useState(false);
-
-  const [isPaused, setIsPaused] = useState(false);
 
   const triggerShake = useCallback(() => {
     setShake(true);
@@ -275,7 +275,7 @@ const BattlePage = () => {
     setAccuracy(100);
     setTimeLeft(MATCH_DURATION);
     setIsMatchActive(false);
-    setIsPaused(false);
+    setPaused(false);
     setBattlePhase('waiting');
     setLocalReady(false);
     statsRef.current = { totalKeystrokes: 0, errors: 0 };
@@ -300,7 +300,7 @@ const BattlePage = () => {
         <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
           <ArcadeText color="cyan" glow className="text-6xl mb-8">PAUSED</ArcadeText>
           <div className="flex flex-col gap-4 w-64">
-            <ArcadeButton color="cyan" onClick={() => { playSound('click'); setIsPaused(false); }}>
+            <ArcadeButton color="cyan" onClick={() => { playSound('click'); setPaused(false); }}>
               RESUME
             </ArcadeButton>
             <ArcadeButton color="pink" onClick={handleRestart}>
@@ -354,7 +354,7 @@ const BattlePage = () => {
       <div className="w-full mx-auto flex flex-col z-10 h-full flex-grow justify-between max-w-[1800px]">
         {/* Top Section */}
         <div className="flex flex-col gap-6 w-full">
-          <BattleHeader timeLeft={formatTime(timeLeft)} matchCode={matchCode} onPause={() => { playSound('click'); setIsPaused(true); }} />
+          <BattleHeader timeLeft={formatTime(timeLeft)} matchCode={matchCode} onPause={() => { playSound('click'); setPaused(true); }} />
           
           {/* Player Panels Row */}
           <div className="flex justify-between items-center w-full mt-2">

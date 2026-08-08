@@ -11,7 +11,7 @@ const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCas
 const CreateMatchPage = () => {
   const navigate = useNavigate();
   const dotsRef = useRef(null);
-  const { matchCode, initMatch, leaveMatch, status } = useMatchStore();
+  const { matchCode, initMatch, leaveMatch, status, category, setCategory } = useMatchStore();
 
   useEffect(() => {
     // Generate new match code and init realtime channel
@@ -51,9 +51,20 @@ const CreateMatchPage = () => {
           </div>
         </div>
 
-        {/* QR Placeholder */}
-        <div className="w-48 h-48 border border-dashed border-[var(--color-neon-cyan-muted)] flex items-center justify-center text-[var(--color-neon-cyan-muted)] font-[family-name:var(--font-arcade)] text-xl">
-          [ QR PLACEHOLDER ]
+        {/* Category Selector */}
+        <div className="flex flex-col items-center gap-3 w-full">
+          <ArcadeText color="pink" className="text-sm">WORD CATEGORY</ArcadeText>
+          <div className="flex flex-wrap justify-center gap-2 w-full max-w-[280px]">
+            {['all', 'common', 'it', 'gaming', 'tech', 'fun'].map(c => (
+              <button 
+                key={c}
+                onClick={() => setCategory(c)}
+                className={`px-3 py-1 font-[family-name:var(--font-arcade)] text-xs md:text-sm border ${category === c ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] shadow-[0_0_10px_var(--color-neon-cyan)]' : 'border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col items-center gap-4">

@@ -2,11 +2,15 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import typingData from '../data/type_battle_word_data.json';
 
-const generateChallenge = (count = 15) => {
+const generateChallenge = (count = 15, category = 'all') => {
   const words = [];
+  const wordList = category === 'all' 
+    ? typingData.all 
+    : (typingData.categories[category] || typingData.all);
+    
   for (let i = 0; i < count; i++) {
-    const randomIndex = Math.floor(Math.random() * typingData.all.length);
-    words.push(typingData.all[randomIndex]);
+    const randomIndex = Math.floor(Math.random() * wordList.length);
+    words.push(wordList[randomIndex]);
   }
   return words.join(" ");
 };
@@ -22,6 +26,34 @@ const useMatchStore = create((set, get) => ({
   localReady: false,
   opponentReady: false,
   challengeText: '',
+  category: 'all',
+  isPaused: false,
+
+  setCategory: (category) => {
+    const { isHost, channel } = get();
+    if (!isHost) return;
+    const newText = generateChallenge(15, category);
+    set({ category, challengeText: newText });
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'match_setup',
+        payload: { challengeText: newText, category }
+      });
+    }
+  },
+
+  setPaused: (paused) => {
+    set({ isPaused: paused });
+    const { channel } = get();
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'match_pause',
+        payload: { isPaused: paused }
+      });
+    }
+  },
 
   setLocalReady: async () => {
     set({ localReady: true });
@@ -46,7 +78,7 @@ const useMatchStore = create((set, get) => ({
       config: { presence: { key: myId } },
     });
 
-    const initialText = isHost ? generateChallenge(15) : '';
+    const initialText = isHost ? generateChallenge(15, get().category) : '';
 
     set({ 
       matchCode: code, 
@@ -78,18 +110,22 @@ const useMatchStore = create((set, get) => ({
         if (connectedPlayers.length === 2 && get().status === 'lobby') {
            set({ status: 'starting' });
            if (get().isHost) {
-             const currentText = get().challengeText || generateChallenge(15);
+             const { category } = get();
+             const currentText = get().challengeText || generateChallenge(15, category);
              newChannel.send({
                type: 'broadcast',
                event: 'match_setup',
-               payload: { challengeText: currentText }
+               payload: { challengeText: currentText, category }
              });
              set({ challengeText: currentText });
            }
         }
       })
       .on('broadcast', { event: 'match_setup' }, (payload) => {
-        set({ challengeText: payload.payload.challengeText });
+        set({ challengeText: payload.payload.challengeText, category: payload.payload.category || 'all' });
+      })
+      .on('broadcast', { event: 'match_pause' }, (payload) => {
+        set({ isPaused: payload.payload.isPaused });
       })
       .on('broadcast', { event: 'player_ready' }, (payload) => {
         if (payload.payload.id !== get().myId) {
@@ -126,14 +162,14 @@ const useMatchStore = create((set, get) => ({
       opponentReady: false,
       // If host restarts, regenerate text for the new match and broadcast it
     });
-    const { isHost, channel } = get();
+    const { isHost, channel, category } = get();
     if (isHost && channel) {
-      const newText = generateChallenge(15);
+      const newText = generateChallenge(15, category);
       set({ challengeText: newText });
       channel.send({
         type: 'broadcast',
         event: 'match_setup',
-        payload: { challengeText: newText }
+        payload: { challengeText: newText, category }
       });
     }
   },
