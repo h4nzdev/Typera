@@ -461,10 +461,10 @@ const BattlePage = () => {
         </div>
         
         {/* Main Battle Section */}
-        <div className="flex flex-col lg:flex-row items-start justify-center gap-8 z-10 w-full max-w-4xl mx-auto">
+        <div className="flex flex-col lg:flex-row items-start justify-center gap-8 z-10 w-full max-w-4xl mx-auto relative">
           
           {/* Left Panel (Absolute on Desktop) */}
-          <div className="hidden lg:block absolute left-4 xl:left-12 top-1/2 -translate-y-1/2 z-20">
+          <div className="hidden lg:block absolute left-[-15rem] xl:left-[-18rem] top-0 z-20">
             <OpponentActivity 
               progress={opponentStats.progress} 
               wpm={opponentStats.wpm} 
@@ -487,7 +487,7 @@ const BattlePage = () => {
           </div>
 
           {/* Right Panel (Absolute on Desktop) */}
-          <div className="hidden lg:flex absolute right-4 xl:right-12 top-1/2 -translate-y-1/2 flex-col gap-4 items-center z-20">
+          <div className="hidden lg:flex absolute right-[-12rem] xl:right-[-15rem] top-0 flex-col gap-4 items-center z-20">
             <ComboDisplay combo={combo} best={maxComboRef.current} />
             <PowerUpSlot heldPowerUp={heldPowerUp} />
           </div>
