@@ -8,10 +8,12 @@ import BattlePage from "./pages/BattlePage";
 import SoloPracticePage from "./pages/SoloPracticePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import MatchResultPage from "./pages/MatchResultPage";
+import BackgroundMusic from "./components/audio/BackgroundMusic";
 
 const App = () => {
   return (
     <BrowserRouter>
+      <BackgroundMusic />
       <Routes>
         <Route path="/" element={<MainMenu />} />
         <Route path="/create" element={<CreateMatchPage />} />
