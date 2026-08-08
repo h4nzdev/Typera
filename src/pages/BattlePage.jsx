@@ -462,9 +462,10 @@ const BattlePage = () => {
         </div>
         
         {/* Main Battle Section */}
-        <div className={`flex flex-col lg:flex-row items-start justify-center gap-8 z-10 w-full max-w-6xl transition-transform ${shake ? 'animate-shake' : ''}`}>
+        <div className={`flex flex-col lg:flex-row items-start justify-center gap-8 z-10 w-full max-w-4xl mx-auto transition-transform ${shake ? 'animate-shake' : ''}`}>
           
-          <div className="hidden lg:block">
+          {/* Left Panel (Absolute on Desktop) */}
+          <div className="hidden lg:block absolute left-4 xl:left-12 top-1/2 -translate-y-1/2 z-20">
             <OpponentActivity 
               progress={opponentStats.progress} 
               wpm={opponentStats.wpm} 
@@ -475,7 +476,7 @@ const BattlePage = () => {
           </div>
 
           {/* Main Typing Section */}
-          <div className="flex-1 w-full max-w-4xl flex flex-col items-center relative">
+          <div className="flex-1 w-full flex flex-col items-center relative">
             {activeDebuff?.type === 'glitch' && (
               <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
                  <ArcadeText color="red" glow className="text-4xl md:text-6xl animate-ping-once bg-black/80 px-8 py-4 rounded-xl border border-red-500 shadow-[0_0_20px_red]">KEYBOARD LOCKED!</ArcadeText>
@@ -485,7 +486,16 @@ const BattlePage = () => {
               <TypingText text={challengeText} typed={typed} />
             </div>
           </div>
-          <div className="flex flex-col gap-4 items-center">
+
+          {/* Right Panel (Absolute on Desktop) */}
+          <div className="hidden lg:flex absolute right-4 xl:right-12 top-1/2 -translate-y-1/2 flex-col gap-4 items-center z-20">
+            <RankBadge wpm={wpm} />
+            <ComboDisplay combo={combo} best={maxComboRef.current} />
+            <PowerUpSlot heldPowerUp={heldPowerUp} />
+          </div>
+
+          {/* Mobile Only: Show Right Panel inline */}
+          <div className="flex lg:hidden flex-col gap-4 items-center mt-8">
             <RankBadge wpm={wpm} />
             <ComboDisplay combo={combo} best={maxComboRef.current} />
             <PowerUpSlot heldPowerUp={heldPowerUp} />
