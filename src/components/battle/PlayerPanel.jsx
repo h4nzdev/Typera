@@ -1,7 +1,8 @@
 import React from 'react';
 import ArcadeText from '../arcade/ArcadeText';
+import { User } from 'lucide-react';
 
-const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', reverse = false }) => {
+const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', reverse = false, hp, maxHp, showHp = false }) => {
   const borderColor = color === 'cyan' ? 'border-[var(--color-neon-cyan)] shadow-[0_0_15px_var(--color-neon-cyan-muted)]' : 'border-[var(--color-neon-pink)] shadow-[0_0_15px_var(--color-neon-pink-muted)]';
   const textColor = color === 'cyan' ? 'text-[var(--color-neon-cyan)]' : 'text-[var(--color-neon-pink)]';
   const barColor = color === 'cyan' ? 'bg-[var(--color-neon-cyan)]' : 'bg-[var(--color-neon-pink)]';
@@ -28,17 +29,26 @@ const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', rever
         </div>
       </div>
       
-      <div className={`flex flex-col flex-grow pt-1 ${reverse ? 'items-end' : 'items-start'}`}>
-        <div className="flex items-center gap-2">
-           <span className={`text-[10px] md:text-xs tracking-widest font-[family-name:var(--font-arcade)] uppercase ${textColor}`}>{player}</span>
-        </div>
-        <div className="flex items-center gap-2 md:gap-3">
-          <ArcadeText color="white" glow className="text-xl md:text-3xl">{name}</ArcadeText>
-          {isYou && <span className={`bg-[var(--color-neon-cyan)] text-black text-[9px] md:text-[10px] px-2 py-0.5 rounded-sm font-bold font-sans`}>YOU</span>}
+      <div className={`flex flex-col gap-2 flex-grow ${reverse ? 'items-end' : 'items-start'}`}>
+        <div className="flex items-end gap-3 mb-1">
+          <ArcadeText color="white" className="text-xl md:text-2xl">{player}</ArcadeText>
+          <ArcadeText color={color} className="text-xs md:text-sm tracking-widest opacity-80">{name}</ArcadeText>
         </div>
         
+        {showHp && (
+          <div className="w-full max-w-[150px] md:max-w-[240px] flex flex-col gap-1 mb-2">
+             <div className="flex justify-between items-center text-[10px] md:text-xs font-[family-name:var(--font-arcade)]">
+                <span className="text-red-400">HP</span>
+                <span className="text-white">{hp}/{maxHp}</span>
+             </div>
+             <div className="w-full h-2 md:h-3 bg-red-900/40 rounded-sm border border-red-900/50 overflow-hidden relative">
+                <div className="h-full bg-red-500 shadow-[0_0_10px_red]" style={{ width: `${Math.max(0, (hp / maxHp) * 100)}%`, transition: 'width 0.3s ease-out' }}></div>
+             </div>
+          </div>
+        )}
+        
         {/* Progress Bar Container */}
-        <div className={`flex gap-[2px] md:gap-[4px] mt-2 md:mt-3 w-full max-w-[150px] md:max-w-[240px] h-4 md:h-5 ${reverse ? 'flex-row-reverse' : 'flex-row'} border border-gray-800 p-0.5 rounded-sm bg-black/50`}>
+        <div className={`flex gap-[2px] md:gap-[4px] w-full max-w-[150px] md:max-w-[240px] h-4 md:h-5 ${reverse ? 'flex-row-reverse' : 'flex-row'} border border-gray-800 p-0.5 rounded-sm bg-black/50`}>
           {Array.from({ length: segments }).map((_, i) => (
             <div 
               key={i} 

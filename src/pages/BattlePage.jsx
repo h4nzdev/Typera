@@ -25,13 +25,16 @@ const BattlePage = () => {
     opponentReady, 
     setLocalReady, 
     broadcastStats,
-    challengeText,
+    challengeWords,
+    gameMode,
     isPaused,
     setPaused,
     status,
     activeDebuff,
     opponentDebuff
   } = useMatchStore();
+  
+  const challengeText = React.useMemo(() => challengeWords.map(w => w.word).join(" "), [challengeWords]);
   
   const [typed, setTyped] = useState('');
   const [startTime, setStartTime] = useState(null);
@@ -47,14 +50,19 @@ const BattlePage = () => {
   
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
-  const [timeLeft, setTimeLeft] = useState(MATCH_DURATION);
+  const [timeLeft, setTimeLeft] = useState(gameMode === 'deathmatch' ? 300 : 120);
+  const [localDamage, setLocalDamage] = useState(0);
   const [isMatchActive, setIsMatchActive] = useState(false);
   
   const [battlePhase, setBattlePhase] = useState('waiting'); // waiting, countdown, playing
   const [countdown, setCountdown] = useState(null);
 
-  const statsRef = useRef({ totalKeystrokes: 0, errors: 0 });
+  const statsRef = useRef({ totalKeystrokes: 0, errors: 0, wordErrors: 0 });
   const maxComboRef = useRef(0);
+
+  const MAX_HP = 1000;
+  const myHp = Math.max(0, MAX_HP - (opponentStats.damageDealt || 0));
+  const opponentHp = Math.max(0, MAX_HP - localDamage);
 
   // Helper to transition to results
   const endGame = useCallback((isWinner, isSurrender = false, isDraw = false) => {
@@ -132,12 +140,19 @@ const BattlePage = () => {
     }
   }, [battlePhase]);
 
-  // Check for opponent finish or surrender
+  // Check for opponent finish, surrender, or KO
   useEffect(() => {
-    if (opponentStats.progress === 100 && battlePhase === 'playing') {
+    if (battlePhase !== 'playing') return;
+    
+    if (gameMode === 'race' && opponentStats.progress === 100) {
       endGame(false, false, false);
     }
-  }, [opponentStats.progress, battlePhase, endGame]);
+    
+    if (gameMode === 'deathmatch') {
+      if (myHp <= 0) endGame(false, false, false);
+      else if (opponentHp <= 0) endGame(true, false, false);
+    }
+  }, [opponentStats.progress, battlePhase, endGame, gameMode, myHp, opponentHp]);
 
   useEffect(() => {
     if (status === 'opponent_surrendered' && battlePhase === 'playing') {
@@ -248,6 +263,7 @@ const BattlePage = () => {
         playSound('error');
         triggerShake();
         statsRef.current.errors += 1;
+        statsRef.current.wordErrors += 1;
         newCombo = 0;
       } else {
         playSound('keyPress');
@@ -263,6 +279,28 @@ const BattlePage = () => {
         }
       }
       setCombo(newCombo);
+      
+      let newDamage = localDamage;
+      if (nextChar === expectedChar && gameMode === 'deathmatch') {
+        newDamage += 1; // 1 damage per correct char
+        
+        // If we finished a word, check for bonus
+        if (nextChar === ' ') {
+           const wordIndex = (prev.match(/ /g) || []).length;
+           const wordObj = challengeWords[wordIndex];
+           if (wordObj && statsRef.current.wordErrors === 0) {
+             if (wordObj.type === 'tnt') {
+               newDamage += 50;
+               playSound('start'); // explosion sound placeholder
+             } else if (wordObj.type === 'sword') {
+               newDamage += 25;
+               playSound('start');
+             }
+           }
+           statsRef.current.wordErrors = 0; // reset for next word
+        }
+      }
+      setLocalDamage(newDamage);
       
       const total = statsRef.current.totalKeystrokes;
       const errs = statsRef.current.errors;
@@ -283,15 +321,20 @@ const BattlePage = () => {
       }
       const newProgress = Math.min(100, Math.round((correctCount / challengeText.length) * 100)) || 0;
       
-      broadcastStats({ progress: newProgress, wpm: newWpm, accuracy: newAcc, combo: newCombo });
+      broadcastStats({ progress: newProgress, wpm: newWpm, accuracy: newAcc, combo: newCombo, damageDealt: newDamage });
       
-      if (next === challengeText) {
+      // Infinite append for deathmatch
+      if (gameMode === 'deathmatch' && next.length > challengeText.length - 100) {
+         useMatchStore.getState().appendWords(30);
+      }
+      
+      if (gameMode === 'race' && next === challengeText) {
          setTimeout(() => endGame(true, false, false), 300);
       }
       
       return next;
     });
-  }, [typed, startTime, timeLeft, wpm, accuracy, combo, broadcastStats, battlePhase, endGame, isPaused, triggerShake]);
+  }, [typed, startTime, timeLeft, wpm, accuracy, combo, broadcastStats, battlePhase, endGame, isPaused, triggerShake, localDamage, gameMode, challengeWords, challengeText]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -307,9 +350,16 @@ const BattlePage = () => {
           if (prev <= 1) {
             clearInterval(interval);
             // Time ran out! Compare progress to decide winner
-            const finalProgress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
-            const isWinner = finalProgress > opponentStats.progress;
-            const isDraw = finalProgress === opponentStats.progress;
+            let isWinner = false;
+            let isDraw = false;
+            if (gameMode === 'race') {
+              const finalProgress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
+              isWinner = finalProgress > opponentStats.progress;
+              isDraw = finalProgress === opponentStats.progress;
+            } else {
+              isWinner = myHp > opponentHp;
+              isDraw = myHp === opponentHp;
+            }
             endGame(isWinner, false, isDraw);
             return 0;
           }
@@ -324,13 +374,13 @@ const BattlePage = () => {
             const currentWpm = Math.max(0, Math.round(((total / 5) - errs) / timeElapsedMinutes));
             setWpm(currentWpm);
             const progress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
-            broadcastStats({ progress, wpm: currentWpm, accuracy, combo });
+            broadcastStats({ progress, wpm: currentWpm, accuracy, combo, damageDealt: localDamage });
           }
         }
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isMatchActive, timeLeft, startTime, broadcastStats, typed, accuracy, combo, opponentStats.progress, endGame]);
+  }, [isMatchActive, timeLeft, startTime, broadcastStats, typed, accuracy, combo, opponentStats.progress, endGame, gameMode, myHp, opponentHp, localDamage]);
 
   const handleRestart = () => {
     playSound('click');
@@ -340,16 +390,17 @@ const BattlePage = () => {
     setCombo(0);
     setWpm(0);
     setAccuracy(100);
-    setTimeLeft(MATCH_DURATION);
+    setTimeLeft(gameMode === 'deathmatch' ? 300 : 120);
+    setLocalDamage(0);
     setIsMatchActive(false);
     setPaused(false);
     setHeldPowerUp(null);
     useMatchStore.getState().setActiveDebuff(null);
     setBattlePhase('waiting');
     setLocalReady(false);
-    statsRef.current = { totalKeystrokes: 0, errors: 0 };
+    statsRef.current = { totalKeystrokes: 0, errors: 0, wordErrors: 0 };
     maxComboRef.current = 0;
-    broadcastStats({ progress: 0, wpm: 0, accuracy: 100, combo: 0 });
+    broadcastStats({ progress: 0, wpm: 0, accuracy: 100, combo: 0, damageDealt: 0 });
   };
 
   const progress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
@@ -445,6 +496,9 @@ const BattlePage = () => {
                progress={isHost ? progress : opponentStats.progress} 
                wpm={isHost ? wpm : opponentStats.wpm} 
                color="cyan" 
+               hp={isHost ? myHp : opponentHp}
+               maxHp={MAX_HP}
+               showHp={gameMode === 'deathmatch'}
             />
             <div className="flex flex-col items-center mx-4">
               <ArcadeText as="div" color="cyan" glow className="text-7xl italic font-bold -skew-x-12">V<span className="text-[var(--color-neon-pink)]">S</span></ArcadeText>
@@ -457,6 +511,9 @@ const BattlePage = () => {
                wpm={!isHost ? wpm : opponentStats.wpm} 
                color="pink" 
                reverse={true} 
+               hp={!isHost ? myHp : opponentHp}
+               maxHp={MAX_HP}
+               showHp={gameMode === 'deathmatch'}
             />
           </div>
         </div>
@@ -473,6 +530,9 @@ const BattlePage = () => {
               combo={opponentStats.combo} 
               color={isHost ? 'pink' : 'cyan'}
               debuff={opponentDebuff}
+              hp={opponentHp}
+              maxHp={MAX_HP}
+              showHp={gameMode === 'deathmatch'}
             />
           </div>
 
@@ -482,7 +542,7 @@ const BattlePage = () => {
               <div className="absolute inset-0 z-50 pointer-events-none mix-blend-difference bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50 animate-pulse"></div>
             )}
             <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-md opacity-30' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-pulse translate-x-1 -translate-y-1 skew-x-2' : ''}`}>
-              <TypingText text={challengeText} typed={typed} />
+              <TypingText text={challengeText} words={challengeWords} typed={typed} />
             </div>
           </div>
 

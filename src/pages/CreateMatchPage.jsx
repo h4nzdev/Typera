@@ -11,7 +11,7 @@ const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCas
 const CreateMatchPage = () => {
   const navigate = useNavigate();
   const dotsRef = useRef(null);
-  const { matchCode, initMatch, leaveMatch, status, category, setCategory } = useMatchStore();
+  const { matchCode, initMatch, leaveMatch, status, category, setCategory, gameMode, setGameMode } = useMatchStore();
 
   useEffect(() => {
     // Generate new match code and init realtime channel
@@ -48,6 +48,25 @@ const CreateMatchPage = () => {
           <ArcadeText color="white" className="text-xl">MATCH CODE</ArcadeText>
           <div className="bg-black/50 border border-[var(--color-neon-cyan)] px-8 py-4 rounded-sm">
             <ArcadeText color="cyan" glow className="text-5xl tracking-[0.5em] ml-[0.25em]">{matchCode || '------'}</ArcadeText>
+          </div>
+        </div>
+
+        {/* Game Mode Selector */}
+        <div className="flex flex-col items-center gap-3 w-full">
+          <ArcadeText color="pink" className="text-sm">GAME MODE</ArcadeText>
+          <div className="flex justify-center gap-4 w-full">
+            <button 
+              onClick={() => setGameMode('race')}
+              className={`px-4 py-2 font-[family-name:var(--font-arcade)] text-sm border ${gameMode === 'race' ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] shadow-[0_0_10px_var(--color-neon-cyan)]' : 'border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm flex-1`}
+            >
+              RACE
+            </button>
+            <button 
+              onClick={() => setGameMode('deathmatch')}
+              className={`px-4 py-2 font-[family-name:var(--font-arcade)] text-sm border ${gameMode === 'deathmatch' ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] shadow-[0_0_10px_var(--color-neon-cyan)]' : 'border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm flex-1`}
+            >
+              DEATHMATCH
+            </button>
           </div>
         </div>
 

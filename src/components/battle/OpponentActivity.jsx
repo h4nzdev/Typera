@@ -1,8 +1,8 @@
 import React from 'react';
 import ArcadeText from '../arcade/ArcadeText';
-import { Activity } from 'lucide-react';
+import { Activity, User } from 'lucide-react';
 
-const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, color = 'pink', debuff = null }) => {
+const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, color = 'pink', debuff = null, hp, maxHp, showHp = false }) => {
   const colorClass = color === 'cyan' ? 'text-[var(--color-neon-cyan)]' : 'text-[var(--color-neon-pink)]';
   const bgClass = color === 'cyan' ? 'bg-[var(--color-neon-cyan)]' : 'bg-[var(--color-neon-pink)]';
   const borderClass = color === 'cyan' ? 'border-[var(--color-neon-cyan-muted)]' : 'border-[var(--color-neon-pink-muted)]';
@@ -26,10 +26,25 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
       )}
 
       <div className={`flex flex-col gap-4 ${isSteal ? 'opacity-10' : ''}`}>
-        <div className="flex items-center gap-2 mb-2">
-          <Activity size={16} className={colorClass} />
-          <span className={`${colorClass} text-xs font-[family-name:var(--font-arcade)] tracking-widest`}>OPPONENT</span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Activity size={16} className={colorClass} />
+            <span className={`${colorClass} text-xs font-[family-name:var(--font-arcade)] tracking-widest`}>OPPONENT</span>
+          </div>
+          {showHp && <User size={16} className="text-gray-400" />}
         </div>
+        
+        {showHp && (
+          <div className="w-full flex flex-col gap-1 mb-2">
+             <div className="flex justify-between items-center text-xs font-[family-name:var(--font-arcade)]">
+                <span className="text-red-400">HP</span>
+                <span className="text-white">{hp}/{maxHp}</span>
+             </div>
+             <div className="w-full h-3 bg-red-900/40 rounded-sm border border-red-900/50 overflow-hidden relative">
+                <div className="h-full bg-red-500 shadow-[0_0_10px_red]" style={{ width: `${Math.max(0, (hp / maxHp) * 100)}%`, transition: 'width 0.3s ease-out' }}></div>
+             </div>
+          </div>
+        )}
 
         <div className="flex justify-between items-center text-xs font-[family-name:var(--font-arcade)] uppercase text-gray-400">
           <span>Typing...</span>

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const TypingText = ({ text = "The quick brown fox jumps over the lazy dog and runs across the street under the bright moonlight.", typed = null }) => {
+const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", words = null, typed = null }) => {
   const textArray = text.split('');
   
   const getCharState = (index) => {
@@ -32,13 +32,17 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog and ru
           {(() => {
             const wordsWithIndices = [];
             let currentIndex = 0;
-            text.split(' ').forEach((word, i, arr) => {
+            
+            const sourceWords = words || text.split(' ').map(word => ({ word, type: 'normal' }));
+            
+            sourceWords.forEach((item, i, arr) => {
               wordsWithIndices.push({
-                word,
+                word: item.word,
+                type: item.type,
                 startIndex: currentIndex,
                 isLast: i === arr.length - 1
               });
-              currentIndex += word.length + 1; // +1 for the space
+              currentIndex += item.word.length + 1; // +1 for the space
             });
 
             return wordsWithIndices.map((item, wordIdx) => {
@@ -51,6 +55,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog and ru
                     const state = getCharState(absIndex);
                     let className = "";
                     
+                    
                     if (state === 'correct') {
                       className = "text-[var(--color-neon-green)] animate-pop-fade";
                     } else if (state === 'incorrect') {
@@ -58,7 +63,9 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog and ru
                     } else if (state === 'current') {
                       className = "text-white bg-white/20";
                     } else {
-                      className = "text-gray-500";
+                      if (item.type === 'tnt') className = "text-red-500 animate-pulse font-bold drop-shadow-[0_0_5px_red]";
+                      else if (item.type === 'sword') className = "text-yellow-500 font-bold drop-shadow-[0_0_5px_yellow]";
+                      else className = "text-gray-500";
                     }
                     
                     return (
