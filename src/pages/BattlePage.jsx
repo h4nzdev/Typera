@@ -29,7 +29,8 @@ const BattlePage = () => {
     isPaused,
     setPaused,
     status,
-    activeDebuff
+    activeDebuff,
+    opponentDebuff
   } = useMatchStore();
   
   const [typed, setTyped] = useState('');
@@ -461,33 +462,32 @@ const BattlePage = () => {
         </div>
         
         {/* Main Battle Section */}
-        <div className="flex flex-col lg:flex-row items-start justify-center gap-8 z-10 w-full max-w-4xl mx-auto relative">
+        <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr_250px] gap-8 z-10 w-full max-w-[1400px] mx-auto items-start">
           
-          {/* Left Panel (Absolute on Desktop) */}
-          <div className="hidden lg:block absolute left-[-15rem] xl:left-[-18rem] top-0 z-20">
+          {/* Left Panel */}
+          <div className="hidden lg:block w-full">
             <OpponentActivity 
               progress={opponentStats.progress} 
               wpm={opponentStats.wpm} 
               accuracy={opponentStats.accuracy} 
               combo={opponentStats.combo} 
               color={isHost ? 'pink' : 'cyan'}
+              debuff={opponentDebuff}
             />
           </div>
 
           {/* Main Typing Section */}
-          <div className={`flex-1 w-full flex flex-col items-center relative transition-transform ${shake ? 'animate-shake' : ''}`}>
+          <div className={`w-full flex flex-col items-center relative transition-transform ${shake ? 'animate-shake' : ''}`}>
             {activeDebuff?.type === 'glitch' && (
-              <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-                 <ArcadeText color="red" glow className="text-4xl md:text-6xl animate-ping-once bg-black/80 px-8 py-4 rounded-xl border border-red-500 shadow-[0_0_20px_red]">KEYBOARD LOCKED!</ArcadeText>
-              </div>
+              <div className="absolute inset-0 z-50 pointer-events-none mix-blend-difference bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50 animate-pulse"></div>
             )}
-            <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-md opacity-30' : ''}`}>
+            <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-md opacity-30' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-pulse translate-x-1 -translate-y-1 skew-x-2' : ''}`}>
               <TypingText text={challengeText} typed={typed} />
             </div>
           </div>
 
-          {/* Right Panel (Absolute on Desktop) */}
-          <div className="hidden lg:flex absolute right-[-12rem] xl:right-[-15rem] top-0 flex-col gap-4 items-center z-20">
+          {/* Right Panel */}
+          <div className="hidden lg:flex flex-col gap-4 items-center w-full">
             <ComboDisplay combo={combo} best={maxComboRef.current} />
             <PowerUpSlot heldPowerUp={heldPowerUp} />
           </div>

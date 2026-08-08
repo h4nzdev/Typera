@@ -5,13 +5,15 @@ import ArcadeText from '../components/arcade/ArcadeText';
 import ArcadeButton from '../components/arcade/ArcadeButton';
 import { supabase } from '../lib/supabase';
 import useMatchStore from '../store/useMatchStore';
+import useUserStore from '../store/useUserStore';
 
 const MatchResultPage = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
   const containerRef = useRef(null);
+  
+  const { playerName } = useUserStore();
 
-  const [playerName, setPlayerName] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -117,7 +119,7 @@ const MatchResultPage = () => {
           <ArcadeText color="white" className="result-subtitle text-2xl tracking-widest">
             {matchData.mode === 'solo' 
               ? 'PRACTICE SESSION FINISHED' 
-              : (isDraw ? "IT'S A TIE!" : (isWinner ? (matchData.surrendered ? 'OPPONENT SURRENDERED' : (submitted ? `${playerName || 'PLAYER 1'} WINS` : 'PLAYER 1 WINS')) : 'YOU LOSE!'))}
+              : (isDraw ? "IT'S A TIE!" : (isWinner ? (matchData.surrendered ? 'OPPONENT SURRENDERED' : (submitted ? `${playerName || 'PLAYER'} WINS` : `${playerName || 'PLAYER'} WINS`)) : 'YOU LOSE!'))}
           </ArcadeText>
         </div>
 
@@ -130,22 +132,9 @@ const MatchResultPage = () => {
         <div className="flex flex-col items-stretch max-w-fit mx-auto mt-2">
           {isWinner && !isDraw && matchData.mode !== 'solo' && !submitted && (
             <div className="flex flex-col items-center gap-4 mb-8">
-              <ArcadeText color="cyan" className="text-sm tracking-widest">ENTER INITIALS FOR LEADERBOARD</ArcadeText>
-              <div className="flex flex-col sm:flex-row items-stretch gap-6 w-full">
-                <input 
-                  type="text" 
-                  maxLength={5}
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
-                  className="bg-black/80 border-2 border-[var(--color-neon-cyan)] rounded text-[var(--color-neon-cyan)] px-4 py-3 text-3xl font-[inherit] uppercase text-center outline-none focus:shadow-[0_0_20px_var(--color-neon-cyan)] transition-shadow flex-grow min-w-0"
-                  placeholder="AAAAA"
-                  autoFocus
-                  disabled={isSaving}
-                />
-                <ArcadeButton color="cyan" className="py-3 px-8 flex items-center justify-center shrink-0" onClick={handleSave} disabled={isSaving || !playerName}>
-                  {isSaving ? 'SAVING...' : 'SAVE'}
-                </ArcadeButton>
-              </div>
+              <ArcadeButton color="cyan" className="py-3 px-12 flex items-center justify-center shrink-0" onClick={handleSave} disabled={isSaving || !playerName}>
+                {isSaving ? 'SAVING...' : 'SAVE TO LEADERBOARD'}
+              </ArcadeButton>
               {saveError && <div className="text-[var(--color-neon-red)] mt-2 font-[family-name:var(--font-arcade)]">{saveError}</div>}
             </div>
           )}

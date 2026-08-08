@@ -29,6 +29,7 @@ const useMatchStore = create((set, get) => ({
   category: 'all',
   isPaused: false,
   activeDebuff: null,
+  opponentDebuff: null,
 
   setActiveDebuff: (debuff) => set({ activeDebuff: debuff }),
 
@@ -40,6 +41,14 @@ const useMatchStore = create((set, get) => ({
         event: 'match_powerup',
         payload: { type }
       });
+      
+      const duration = type === 'blind' ? 3000 : 2000;
+      set({ opponentDebuff: { type, endsAt: Date.now() + duration } });
+      setTimeout(() => {
+        if (get().opponentDebuff?.type === type) {
+          set({ opponentDebuff: null });
+        }
+      }, duration);
     }
   },
 
