@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import ArcadeText from '../components/arcade/ArcadeText';
 import ArcadePanel from '../components/arcade/ArcadePanel';
+import ArcadeButton from '../components/arcade/ArcadeButton';
 import useMatchStore from '../store/useMatchStore';
 
 const MatchLobbyPage = () => {
