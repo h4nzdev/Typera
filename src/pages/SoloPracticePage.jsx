@@ -39,48 +39,61 @@ const SoloPracticePage = () => {
     setPressedKey(e.key);
     setTimeout(() => setPressedKey(null), 150);
 
+    const hasTypos = typed !== SAMPLE_TEXT.slice(0, typed.length);
+
     if (e.key === 'Backspace') {
       playSound('keyPress');
       setTyped(prev => prev.slice(0, -1));
       setCombo(0); 
-    } else {
-      statsRef.current.totalKeystrokes += 1;
-      
-      setTyped(prev => {
-        const nextIndex = prev.length;
-        if (nextIndex >= SAMPLE_TEXT.length) return prev;
-
-        const nextChar = e.key;
-        const expectedChar = SAMPLE_TEXT[nextIndex];
-        
-        if (nextChar !== expectedChar) {
-          playSound('error');
-          statsRef.current.errors += 1;
-          setCombo(0);
-        } else {
-          playSound('keyPress');
-          setCombo(c => {
-            const newCombo = c + 1;
-            if (newCombo % 10 === 0) playSound('combo');
-            return newCombo;
-          });
-        }
-        
-        // Calculate Accuracy: Correct Characters / Total Characters * 100
-        const total = statsRef.current.totalKeystrokes;
-        const errs = statsRef.current.errors;
-        const correct = total - errs;
-        setAccuracy(Math.max(0, Math.round((correct / total) * 100)));
-
-        // Calculate WPM: ((Total Characters / 5) - Errors) / Minutes
-        const timeElapsedMinutes = (Date.now() - (startTime || Date.now())) / 1000 / 60;
-        if (timeElapsedMinutes > 0) {
-            setWpm(Math.max(0, Math.round(((total / 5) - errs) / timeElapsedMinutes)));
-        }
-
-        return prev + nextChar;
-      });
+      return;
     }
+
+    if (hasTypos) {
+      playSound('error');
+      return;
+    }
+
+    statsRef.current.totalKeystrokes += 1;
+    
+    setTyped(prev => {
+      const nextIndex = prev.length;
+      if (nextIndex >= SAMPLE_TEXT.length) return prev;
+
+      const nextChar = e.key;
+      const expectedChar = SAMPLE_TEXT[nextIndex];
+      let next = prev + nextChar;
+      
+      if (nextChar !== expectedChar) {
+        playSound('error');
+        statsRef.current.errors += 1;
+        setCombo(0);
+      } else {
+        playSound('keyPress');
+        setCombo(c => {
+          const newCombo = c + 1;
+          if (newCombo % 10 === 0) playSound('combo');
+          return newCombo;
+        });
+      }
+      
+      const total = statsRef.current.totalKeystrokes;
+      const errs = statsRef.current.errors;
+      const correct = total - errs;
+      setAccuracy(Math.max(0, Math.round((correct / total) * 100)));
+
+      const timeElapsedMinutes = (Date.now() - (startTime || Date.now())) / 1000 / 60;
+      if (timeElapsedMinutes > 0) {
+          setWpm(Math.max(0, Math.round(((total / 5) - errs) / timeElapsedMinutes)));
+      }
+
+      // If we finished perfectly, just end the local solo game logic
+      if (next === SAMPLE_TEXT) {
+         setIsMatchActive(false);
+         // (Can optionally navigate to a solo result screen here)
+      }
+
+      return next;
+    });
   }, [typed, startTime, timeLeft]);
 
   useEffect(() => {

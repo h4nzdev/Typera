@@ -103,71 +103,86 @@ const BattlePage = () => {
     setPressedKey(e.key);
     setTimeout(() => setPressedKey(null), 150);
 
-    let newProgress = 0;
-    let newWpm = wpm;
-    let newAcc = accuracy;
-    let newCombo = combo;
+    const hasTypos = typed !== SAMPLE_TEXT.slice(0, typed.length);
 
     if (e.key === 'Backspace') {
       playSound('keyPress');
       setTyped(prev => {
         const next = prev.slice(0, -1);
-        newProgress = Math.min(100, Math.round((next.length / SAMPLE_TEXT.length) * 100)) || 0;
+        let correctCount = 0;
+        for (let i = 0; i < next.length; i++) {
+          if (next[i] === SAMPLE_TEXT[i]) correctCount++;
+          else break;
+        }
+        const newProgress = Math.min(100, Math.round((correctCount / SAMPLE_TEXT.length) * 100)) || 0;
+        broadcastStats({ progress: newProgress, wpm, accuracy, combo: 0 });
         return next;
       });
-      newCombo = 0;
       setCombo(0); 
-    } else {
-      statsRef.current.totalKeystrokes += 1;
-      
-      setTyped(prev => {
-        const nextIndex = prev.length;
-        if (nextIndex >= SAMPLE_TEXT.length) return prev;
-
-        const nextChar = e.key;
-        const expectedChar = SAMPLE_TEXT[nextIndex];
-        
-        if (nextChar !== expectedChar) {
-          playSound('error');
-          statsRef.current.errors += 1;
-          newCombo = 0;
-          setCombo(0);
-        } else {
-          playSound('keyPress');
-          setCombo(c => {
-            newCombo = c + 1;
-            maxComboRef.current = Math.max(maxComboRef.current, newCombo);
-            if (newCombo % 10 === 0) playSound('combo');
-            return newCombo;
-          });
-        }
-        
-        const total = statsRef.current.totalKeystrokes;
-        const errs = statsRef.current.errors;
-        const correct = total - errs;
-        newAcc = Math.max(0, Math.round((correct / total) * 100));
-        setAccuracy(newAcc);
-
-        const timeElapsedMinutes = (Date.now() - startTime) / 1000 / 60;
-        if (timeElapsedMinutes > 0) {
-            newWpm = Math.max(0, Math.round(((total / 5) - errs) / timeElapsedMinutes));
-            setWpm(newWpm);
-        }
-
-        const next = prev + nextChar;
-        newProgress = Math.min(100, Math.round((next.length / SAMPLE_TEXT.length) * 100)) || 0;
-        
-        // Broadcast
-        broadcastStats({ progress: newProgress, wpm: newWpm, accuracy: newAcc, combo: newCombo });
-        
-        // Did we finish?
-        if (newProgress >= 100) {
-           setTimeout(() => endGame(true), 300);
-        }
-        
-        return next;
-      });
+      return;
     }
+
+    if (hasTypos) {
+      playSound('error');
+      return;
+    }
+
+    statsRef.current.totalKeystrokes += 1;
+    
+    setTyped(prev => {
+      const nextIndex = prev.length;
+      if (nextIndex >= SAMPLE_TEXT.length) return prev;
+
+      const nextChar = e.key;
+      const expectedChar = SAMPLE_TEXT[nextIndex];
+      let next = prev + nextChar;
+      
+      let newWpm = wpm;
+      let newAcc = accuracy;
+      let newCombo = combo;
+
+      if (nextChar !== expectedChar) {
+        playSound('error');
+        statsRef.current.errors += 1;
+        newCombo = 0;
+        setCombo(0);
+      } else {
+        playSound('keyPress');
+        setCombo(c => {
+          newCombo = c + 1;
+          maxComboRef.current = Math.max(maxComboRef.current, newCombo);
+          if (newCombo % 10 === 0) playSound('combo');
+          return newCombo;
+        });
+      }
+      
+      const total = statsRef.current.totalKeystrokes;
+      const errs = statsRef.current.errors;
+      const correct = total - errs;
+      newAcc = Math.max(0, Math.round((correct / total) * 100));
+      setAccuracy(newAcc);
+
+      const timeElapsedMinutes = (Date.now() - startTime) / 1000 / 60;
+      if (timeElapsedMinutes > 0) {
+          newWpm = Math.max(0, Math.round(((total / 5) - errs) / timeElapsedMinutes));
+          setWpm(newWpm);
+      }
+
+      let correctCount = 0;
+      for (let i = 0; i < next.length; i++) {
+        if (next[i] === SAMPLE_TEXT[i]) correctCount++;
+        else break;
+      }
+      const newProgress = Math.min(100, Math.round((correctCount / SAMPLE_TEXT.length) * 100)) || 0;
+      
+      broadcastStats({ progress: newProgress, wpm: newWpm, accuracy: newAcc, combo: newCombo });
+      
+      if (next === SAMPLE_TEXT) {
+         setTimeout(() => endGame(true), 300);
+      }
+      
+      return next;
+    });
   }, [typed, startTime, timeLeft, wpm, accuracy, combo, broadcastStats, battlePhase, endGame]);
 
   useEffect(() => {

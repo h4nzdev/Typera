@@ -56,40 +56,44 @@ const MatchResultPage = () => {
           <ArcadeText color="yellow" glow className="text-3xl">MAX COMBO ×{maxCombo}</ArcadeText>
         </div>
 
-        {isWinner && !submitted && (
-          <div className="flex flex-col items-center gap-4 mt-2">
-            <ArcadeText color="cyan" className="text-sm tracking-widest">ENTER INITIALS FOR LEADERBOARD</ArcadeText>
-            <div className="flex flex-col sm:flex-row items-stretch gap-6">
-              <input 
-                type="text" 
-                maxLength={5}
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
-                className="bg-black/80 border-2 border-[var(--color-neon-cyan)] rounded text-[var(--color-neon-cyan)] px-4 py-3 text-3xl font-[inherit] uppercase text-center outline-none focus:shadow-[0_0_20px_var(--color-neon-cyan)] transition-shadow w-56"
-                placeholder="AAAAA"
-                autoFocus
-              />
-              <ArcadeButton color="cyan" className="py-3 px-8 flex items-center justify-center" onClick={() => setSubmitted(true)}>
-                SAVE
-              </ArcadeButton>
+        <div className="flex flex-col items-stretch max-w-fit mx-auto mt-2">
+          {isWinner && !submitted && (
+            <div className="flex flex-col items-center gap-4 mb-8">
+              <ArcadeText color="cyan" className="text-sm tracking-widest">ENTER INITIALS FOR LEADERBOARD</ArcadeText>
+              <div className="flex flex-col sm:flex-row items-stretch gap-6 w-full">
+                <input 
+                  type="text" 
+                  maxLength={5}
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
+                  className="bg-black/80 border-2 border-[var(--color-neon-cyan)] rounded text-[var(--color-neon-cyan)] px-4 py-3 text-3xl font-[inherit] uppercase text-center outline-none focus:shadow-[0_0_20px_var(--color-neon-cyan)] transition-shadow flex-grow min-w-0"
+                  placeholder="AAAAA"
+                  autoFocus
+                />
+                <ArcadeButton color="cyan" className="py-3 px-8 flex items-center justify-center shrink-0" onClick={() => setSubmitted(true)}>
+                  SAVE
+                </ArcadeButton>
+              </div>
             </div>
+          )}
+
+          {!isWinner && (
+            <div className="flex justify-center mb-8">
+              <ArcadeText color="pink" className="text-xl">KEEP TRAINING!</ArcadeText>
+            </div>
+          )}
+
+          <div className="result-btns flex flex-col sm:flex-row gap-6">
+            <ArcadeButton color="cyan" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/battle')}>
+              PLAY AGAIN
+            </ArcadeButton>
+            <ArcadeButton color="pink" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/create')}>
+              NEW MATCH
+            </ArcadeButton>
+            <ArcadeButton color="purple" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/leaderboard')}>
+              LEADERBOARD
+            </ArcadeButton>
           </div>
-        )}
-
-        {!isWinner && (
-          <ArcadeText color="pink" className="text-xl mb-4">KEEP TRAINING!</ArcadeText>
-        )}
-
-        <div className="result-btns flex flex-col sm:flex-row gap-6 mt-8">
-          <ArcadeButton color="cyan" onClick={() => navigate('/battle')}>
-            PLAY AGAIN
-          </ArcadeButton>
-          <ArcadeButton color="pink" onClick={() => navigate('/create')}>
-            NEW MATCH
-          </ArcadeButton>
-          <ArcadeButton color="purple" onClick={() => navigate('/leaderboard')}>
-            LEADERBOARD
-          </ArcadeButton>
         </div>
       </div>
     </div>
