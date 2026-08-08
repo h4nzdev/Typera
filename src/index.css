@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --font-arcade: "VT323", monospace;
+  --font-mono: "Fira Code", monospace;
+
+  --color-arcade-bg: #05050A;
+  --color-neon-cyan: #00f3ff;
+  --color-neon-purple: #b026ff;
+  --color-neon-pink: #ff007f;
+  --color-neon-green: #39ff14;
+  --color-neon-yellow: #fffb00;
+  --color-neon-red: #ff003c;
+  
+  --color-neon-cyan-muted: rgba(0, 243, 255, 0.2);
+  --color-neon-purple-muted: rgba(176, 38, 255, 0.2);
+  --color-neon-pink-muted: rgba(255, 0, 127, 0.2);
+  --color-neon-green-muted: rgba(57, 255, 20, 0.2);
+  --color-neon-red-muted: rgba(255, 0, 60, 0.2);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-arcade-bg);
+    background-image: url('./assets/background/background.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: white;
+    font-family: sans-serif;
+  }
+}
+
+/* Custom Utilities for Neon Effects */
+@layer utilities {
+  .text-glow-cyan {
+    text-shadow: 0 0 5px var(--color-neon-cyan), 0 0 10px var(--color-neon-cyan), 0 0 20px var(--color-neon-cyan);
+  }
+  .text-glow-purple {
+    text-shadow: 0 0 5px var(--color-neon-purple), 0 0 10px var(--color-neon-purple), 0 0 20px var(--color-neon-purple);
+  }
+  .text-glow-pink {
+    text-shadow: 0 0 5px var(--color-neon-pink), 0 0 10px var(--color-neon-pink), 0 0 20px var(--color-neon-pink);
+  }
+  .text-glow-green {
+    text-shadow: 0 0 5px var(--color-neon-green), 0 0 10px var(--color-neon-green), 0 0 20px var(--color-neon-green);
+  }
+  .text-glow-red {
+    text-shadow: 0 0 5px var(--color-neon-red), 0 0 10px var(--color-neon-red), 0 0 20px var(--color-neon-red);
+  }
+  
+  .border-glow-cyan {
+    box-shadow: 0 0 5px var(--color-neon-cyan-muted), inset 0 0 5px var(--color-neon-cyan-muted);
+  }
+  .border-glow-pink {
+    box-shadow: 0 0 5px var(--color-neon-pink-muted), inset 0 0 5px var(--color-neon-pink-muted);
+  }
+}
