@@ -27,6 +27,9 @@ const SoloPracticePage = () => {
   const statsRef = useRef({ totalKeystrokes: 0, errors: 0 });
 
   const handleKeyDown = useCallback((e) => {
+    // Prevent spacebar from scrolling the page
+    if (e.key === ' ') e.preventDefault();
+
     if (e.key.length > 1 && e.key !== 'Backspace') return;
     if (timeLeft <= 0) return;
     if (typed.length >= SAMPLE_TEXT.length && e.key !== 'Backspace') return;

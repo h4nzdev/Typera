@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
 import ArcadeText from '../components/arcade/ArcadeText';
 import ArcadeButton from '../components/arcade/ArcadeButton';
+import { supabase } from '../lib/supabase';
 
 const MatchResultPage = () => {
   const navigate = useNavigate();
@@ -11,12 +12,14 @@ const MatchResultPage = () => {
 
   const [playerName, setPlayerName] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   // Fallback to mock data if accessed directly for testing
   const matchData = state || {
     isWinner: true,
     wpm: 94,
-    accuracy: 98.7,
+    accuracy: 98,
     maxCombo: 42
   };
   const { isWinner, wpm, accuracy, maxCombo } = matchData;
@@ -32,6 +35,32 @@ const MatchResultPage = () => {
     
     return () => ctx.revert();
   }, []);
+
+  const handleSave = async () => {
+    if (!playerName || playerName.trim().length === 0) return;
+    
+    setIsSaving(true);
+    setSaveError(null);
+    
+    const { error } = await supabase
+      .from('leaderboard')
+      .insert({
+        name: playerName,
+        wpm,
+        accuracy,
+        max_combo: maxCombo
+      });
+      
+    setIsSaving(false);
+    
+    if (error) {
+      console.error("Error saving score:", error);
+      setSaveError("FAILED TO SAVE.");
+    } else {
+      setSubmitted(true);
+      setTimeout(() => navigate('/leaderboard'), 1000);
+    }
+  };
 
   return (
     <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center bg-black/90 relative overflow-hidden">
@@ -69,11 +98,13 @@ const MatchResultPage = () => {
                   className="bg-black/80 border-2 border-[var(--color-neon-cyan)] rounded text-[var(--color-neon-cyan)] px-4 py-3 text-3xl font-[inherit] uppercase text-center outline-none focus:shadow-[0_0_20px_var(--color-neon-cyan)] transition-shadow flex-grow min-w-0"
                   placeholder="AAAAA"
                   autoFocus
+                  disabled={isSaving}
                 />
-                <ArcadeButton color="cyan" className="py-3 px-8 flex items-center justify-center shrink-0" onClick={() => setSubmitted(true)}>
-                  SAVE
+                <ArcadeButton color="cyan" className="py-3 px-8 flex items-center justify-center shrink-0" onClick={handleSave} disabled={isSaving || !playerName}>
+                  {isSaving ? 'SAVING...' : 'SAVE'}
                 </ArcadeButton>
               </div>
+              {saveError && <div className="text-[var(--color-neon-red)] mt-2 font-[family-name:var(--font-arcade)]">{saveError}</div>}
             </div>
           )}
 
@@ -84,13 +115,13 @@ const MatchResultPage = () => {
           )}
 
           <div className="result-btns flex flex-col sm:flex-row gap-6">
-            <ArcadeButton color="cyan" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/battle')}>
+            <ArcadeButton color="cyan" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/battle')} disabled={isSaving}>
               PLAY AGAIN
             </ArcadeButton>
-            <ArcadeButton color="pink" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/create')}>
+            <ArcadeButton color="pink" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/create')} disabled={isSaving}>
               NEW MATCH
             </ArcadeButton>
-            <ArcadeButton color="purple" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/leaderboard')}>
+            <ArcadeButton color="purple" className="flex-1 whitespace-nowrap flex items-center justify-center" onClick={() => navigate('/leaderboard')} disabled={isSaving}>
               LEADERBOARD
             </ArcadeButton>
           </div>

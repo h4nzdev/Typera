@@ -60,6 +60,18 @@ const BattlePage = () => {
     }
   }, [localReady, opponentReady, battlePhase]);
 
+  // Block the back button during gameplay
+  useEffect(() => {
+    if (battlePhase === 'playing') {
+      window.history.pushState(null, "", window.location.pathname);
+      const handlePopState = () => {
+        window.history.pushState(null, "", window.location.pathname);
+      };
+      window.addEventListener("popstate", handlePopState);
+      return () => window.removeEventListener("popstate", handlePopState);
+    }
+  }, [battlePhase]);
+
   // Run Countdown
   useEffect(() => {
     if (battlePhase === 'countdown') {
@@ -95,6 +107,9 @@ const BattlePage = () => {
   }, [opponentStats.progress, battlePhase, endGame]);
 
   const handleKeyDown = useCallback((e) => {
+    // Prevent spacebar from scrolling the page
+    if (e.key === ' ') e.preventDefault();
+
     if (battlePhase !== 'playing') return;
     if (e.key.length > 1 && e.key !== 'Backspace') return;
     if (timeLeft <= 0) return;
