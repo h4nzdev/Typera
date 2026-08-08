@@ -3,7 +3,7 @@ import ArcadeText from '../arcade/ArcadeText';
 import { Pause } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const BattleHeader = ({ timeLeft = "01:24", matchCode = "8F2K91" }) => {
+const BattleHeader = ({ timeLeft = "01:24", matchCode = "8F2K91", onPause }) => {
   const navigate = useNavigate();
   return (
     <div className="flex justify-between items-center w-full">
@@ -31,7 +31,10 @@ const BattleHeader = ({ timeLeft = "01:24", matchCode = "8F2K91" }) => {
            <span className="text-[var(--color-neon-pink)] text-[10px] tracking-widest font-[family-name:var(--font-arcade)] uppercase">TIME LEFT</span>
            <ArcadeText color="white" glow className="text-2xl">{timeLeft}</ArcadeText>
         </div>
-        <button className="border-2 border-white/20 rounded-xl p-3 bg-black/40 hover:bg-white/10 transition-colors cursor-pointer">
+        <button 
+          onClick={onPause}
+          className="border-2 border-white/20 rounded-xl p-3 bg-black/40 hover:bg-white/10 transition-colors cursor-pointer"
+        >
           <Pause size={20} className="text-white" fill="white" />
         </button>
       </div>

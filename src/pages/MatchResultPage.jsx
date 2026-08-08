@@ -42,6 +42,25 @@ const MatchResultPage = () => {
     
     setIsSaving(true);
     setSaveError(null);
+
+    // Check if name already exists
+    const { data: existingUsers, error: queryError } = await supabase
+      .from('leaderboard')
+      .select('name')
+      .eq('name', playerName);
+
+    if (queryError) {
+      console.error("Error checking name:", queryError);
+      setSaveError("ERROR VERIFYING NAME.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (existingUsers && existingUsers.length > 0) {
+      setSaveError("INITIALS ALREADY TAKEN.");
+      setIsSaving(false);
+      return;
+    }
     
     const { error } = await supabase
       .from('leaderboard')
@@ -87,7 +106,7 @@ const MatchResultPage = () => {
         </div>
 
         <div className="flex flex-col items-stretch max-w-fit mx-auto mt-2">
-          {isWinner && !submitted && (
+          {isWinner && matchData.mode !== 'solo' && !submitted && (
             <div className="flex flex-col items-center gap-4 mb-8">
               <ArcadeText color="cyan" className="text-sm tracking-widest">ENTER INITIALS FOR LEADERBOARD</ArcadeText>
               <div className="flex flex-col sm:flex-row items-stretch gap-6 w-full">
@@ -109,7 +128,7 @@ const MatchResultPage = () => {
             </div>
           )}
 
-          {!isWinner && (
+          {(!isWinner || matchData.mode === 'solo' || submitted) && (
             <div className="flex justify-center mb-8">
               <ArcadeText color="pink" className="text-xl">KEEP TRAINING!</ArcadeText>
             </div>
@@ -126,16 +145,20 @@ const MatchResultPage = () => {
             }} disabled={isSaving}>
               PLAY AGAIN
             </ArcadeButton>
-            <ArcadeButton color="pink" className="whitespace-nowrap" onClick={() => {
-              const { isHost, leaveMatch } = useMatchStore.getState();
-              leaveMatch();
-              navigate(isHost ? '/create' : '/join');
-            }} disabled={isSaving}>
-              NEW MATCH
-            </ArcadeButton>
-            <ArcadeButton color="purple" className="whitespace-nowrap" onClick={() => navigate('/leaderboard')} disabled={isSaving}>
-              LEADERBOARD
-            </ArcadeButton>
+            {matchData.mode !== 'solo' && (
+              <>
+                <ArcadeButton color="pink" className="whitespace-nowrap" onClick={() => {
+                  const { isHost, leaveMatch } = useMatchStore.getState();
+                  leaveMatch();
+                  navigate(isHost ? '/create' : '/join');
+                }} disabled={isSaving}>
+                  NEW MATCH
+                </ArcadeButton>
+                <ArcadeButton color="purple" className="whitespace-nowrap" onClick={() => navigate('/leaderboard')} disabled={isSaving}>
+                  LEADERBOARD
+                </ArcadeButton>
+              </>
+            )}
             <ArcadeButton color="white" className="whitespace-nowrap text-white border-white hover:bg-white/10 text-shadow-none shadow-none text-glow-none border-glow-none" onClick={() => {
               useMatchStore.getState().leaveMatch();
               navigate('/');

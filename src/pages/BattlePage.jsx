@@ -12,18 +12,28 @@ import { useNavigate } from 'react-router-dom';
 import useMatchStore from '../store/useMatchStore';
 import { playSound } from '../lib/sounds';
 
-const SAMPLE_TEXT = "The quick brown fox jumps over the lazy dog and runs across the street under the bright moonlight.";
 const MATCH_DURATION = 60; // 60 seconds match
 
 const BattlePage = () => {
   const navigate = useNavigate();
-  const { players, isHost, broadcastStats, opponentStats, matchCode, localReady, opponentReady, setLocalReady } = useMatchStore();
+  const { 
+    matchCode, 
+    isHost, 
+    opponentStats, 
+    localReady, 
+    opponentReady, 
+    setLocalReady, 
+    broadcastStats,
+    challengeText
+  } = useMatchStore();
   
   const [typed, setTyped] = useState('');
   const [startTime, setStartTime] = useState(null);
   const [pressedKey, setPressedKey] = useState(null);
   const [combo, setCombo] = useState(0);
   const [shake, setShake] = useState(false);
+
+  const [isPaused, setIsPaused] = useState(false);
 
   const triggerShake = useCallback(() => {
     setShake(true);
@@ -54,7 +64,8 @@ const BattlePage = () => {
         isWinner,
         wpm,
         accuracy: finalAccuracy,
-        maxCombo: maxComboRef.current
+        maxCombo: maxComboRef.current,
+        mode: 'battle'
       }
     });
   }, [navigate, wpm, accuracy]);
@@ -126,15 +137,16 @@ const BattlePage = () => {
     // Prevent spacebar from scrolling the page
     if (e.key === ' ') e.preventDefault();
 
+    if (isPaused) return;
     if (battlePhase !== 'playing') return;
     if (e.key.length > 1 && e.key !== 'Backspace') return;
     if (timeLeft <= 0) return;
-    if (typed.length >= SAMPLE_TEXT.length && e.key !== 'Backspace') return;
+    if (typed.length >= challengeText.length && e.key !== 'Backspace') return;
 
     setPressedKey(e.key);
     setTimeout(() => setPressedKey(null), 150);
 
-    const hasTypos = typed !== SAMPLE_TEXT.slice(0, typed.length);
+    const hasTypos = typed !== challengeText.slice(0, typed.length);
 
     if (e.key === 'Backspace') {
       playSound('keyPress');
@@ -142,10 +154,10 @@ const BattlePage = () => {
         const next = prev.slice(0, -1);
         let correctCount = 0;
         for (let i = 0; i < next.length; i++) {
-          if (next[i] === SAMPLE_TEXT[i]) correctCount++;
+          if (next[i] === challengeText[i]) correctCount++;
           else break;
         }
-        const newProgress = Math.min(100, Math.round((correctCount / SAMPLE_TEXT.length) * 100)) || 0;
+        const newProgress = Math.min(100, Math.round((correctCount / challengeText.length) * 100)) || 0;
         broadcastStats({ progress: newProgress, wpm, accuracy, combo: 0 });
         return next;
       });
@@ -163,10 +175,10 @@ const BattlePage = () => {
     
     setTyped(prev => {
       const nextIndex = prev.length;
-      if (nextIndex >= SAMPLE_TEXT.length) return prev;
+      if (nextIndex >= challengeText.length) return prev;
 
       const nextChar = e.key;
-      const expectedChar = SAMPLE_TEXT[nextIndex];
+      const expectedChar = challengeText[nextIndex];
       let next = prev + nextChar;
       
       let newWpm = wpm;
@@ -178,16 +190,13 @@ const BattlePage = () => {
         triggerShake();
         statsRef.current.errors += 1;
         newCombo = 0;
-        setCombo(0);
       } else {
         playSound('keyPress');
-        setCombo(c => {
-          newCombo = c + 1;
-          maxComboRef.current = Math.max(maxComboRef.current, newCombo);
-          if (newCombo % 10 === 0) playSound('combo');
-          return newCombo;
-        });
+        newCombo = combo + 1;
+        maxComboRef.current = Math.max(maxComboRef.current, newCombo);
+        if (newCombo > 0 && newCombo % 10 === 0) playSound('combo');
       }
+      setCombo(newCombo);
       
       const total = statsRef.current.totalKeystrokes;
       const errs = statsRef.current.errors;
@@ -203,20 +212,20 @@ const BattlePage = () => {
 
       let correctCount = 0;
       for (let i = 0; i < next.length; i++) {
-        if (next[i] === SAMPLE_TEXT[i]) correctCount++;
+        if (next[i] === challengeText[i]) correctCount++;
         else break;
       }
-      const newProgress = Math.min(100, Math.round((correctCount / SAMPLE_TEXT.length) * 100)) || 0;
+      const newProgress = Math.min(100, Math.round((correctCount / challengeText.length) * 100)) || 0;
       
       broadcastStats({ progress: newProgress, wpm: newWpm, accuracy: newAcc, combo: newCombo });
       
-      if (next === SAMPLE_TEXT) {
+      if (next === challengeText) {
          setTimeout(() => endGame(true), 300);
       }
       
       return next;
     });
-  }, [typed, startTime, timeLeft, wpm, accuracy, combo, broadcastStats, battlePhase, endGame]);
+  }, [typed, startTime, timeLeft, wpm, accuracy, combo, broadcastStats, battlePhase, endGame, isPaused, triggerShake]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -232,7 +241,7 @@ const BattlePage = () => {
           if (prev <= 1) {
             clearInterval(interval);
             // Time ran out! Compare progress to decide winner
-            const finalProgress = Math.min(100, Math.round((typed.length / SAMPLE_TEXT.length) * 100)) || 0;
+            const finalProgress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
             const isWinner = finalProgress >= opponentStats.progress;
             endGame(isWinner);
             return 0;
@@ -247,7 +256,7 @@ const BattlePage = () => {
           if (timeElapsedMinutes > 0) {
             const currentWpm = Math.max(0, Math.round(((total / 5) - errs) / timeElapsedMinutes));
             setWpm(currentWpm);
-            const progress = Math.min(100, Math.round((typed.length / SAMPLE_TEXT.length) * 100)) || 0;
+            const progress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
             broadcastStats({ progress, wpm: currentWpm, accuracy, combo });
           }
         }
@@ -266,6 +275,7 @@ const BattlePage = () => {
     setAccuracy(100);
     setTimeLeft(MATCH_DURATION);
     setIsMatchActive(false);
+    setIsPaused(false);
     setBattlePhase('waiting');
     setLocalReady(false);
     statsRef.current = { totalKeystrokes: 0, errors: 0 };
@@ -273,7 +283,7 @@ const BattlePage = () => {
     broadcastStats({ progress: 0, wpm: 0, accuracy: 100, combo: 0 });
   };
 
-  const progress = Math.min(100, Math.round((typed.length / SAMPLE_TEXT.length) * 100)) || 0;
+  const progress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
   
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -285,8 +295,26 @@ const BattlePage = () => {
     <div className="min-h-screen flex flex-col bg-black/50 overflow-hidden p-4 md:p-8 relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,243,255,0.03)_0%,transparent_80%)] pointer-events-none"></div>
       
+      {/* Pause Modal Overlay */}
+      {isPaused && (
+        <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
+          <ArcadeText color="cyan" glow className="text-6xl mb-8">PAUSED</ArcadeText>
+          <div className="flex flex-col gap-4 w-64">
+            <ArcadeButton color="cyan" onClick={() => { playSound('click'); setIsPaused(false); }}>
+              RESUME
+            </ArcadeButton>
+            <ArcadeButton color="pink" onClick={handleRestart}>
+              RESTART
+            </ArcadeButton>
+            <ArcadeButton color="white" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>
+              MAIN MENU
+            </ArcadeButton>
+          </div>
+        </div>
+      )}
+
       {/* Ready Overlay */}
-      {battlePhase === 'waiting' && (
+      {battlePhase === 'waiting' && !isPaused && (
         <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
           {!localReady ? (
             <ArcadeButton color="cyan" className="text-4xl px-16 py-8 animate-pulse" onClick={setLocalReady}>
@@ -301,7 +329,7 @@ const BattlePage = () => {
       )}
 
       {/* Countdown Overlay */}
-      {battlePhase === 'countdown' && (
+      {battlePhase === 'countdown' && !isPaused && (
         <div className="absolute inset-0 z-50 bg-black/60 flex flex-col items-center justify-center pointer-events-none backdrop-blur-sm">
           <ArcadeText 
             key={countdown} 
@@ -326,7 +354,7 @@ const BattlePage = () => {
       <div className="w-full mx-auto flex flex-col z-10 h-full flex-grow justify-between max-w-[1800px]">
         {/* Top Section */}
         <div className="flex flex-col gap-6 w-full">
-          <BattleHeader timeLeft={formatTime(timeLeft)} matchCode={matchCode} />
+          <BattleHeader timeLeft={formatTime(timeLeft)} matchCode={matchCode} onPause={() => { playSound('click'); setIsPaused(true); }} />
           
           {/* Player Panels Row */}
           <div className="flex justify-between items-center w-full mt-2">
@@ -356,9 +384,19 @@ const BattlePage = () => {
         {/* Main Battle Section */}
         <div className={`flex flex-col lg:flex-row items-start justify-center gap-8 z-10 w-full max-w-6xl transition-transform ${shake ? 'animate-shake' : ''}`}>
           
+          <div className="hidden lg:block">
+            <OpponentActivity 
+              progress={opponentStats.progress} 
+              wpm={opponentStats.wpm} 
+              accuracy={opponentStats.accuracy} 
+              combo={opponentStats.combo} 
+              color={isHost ? 'pink' : 'cyan'}
+            />
+          </div>
+
           {/* Main Typing Section */}
           <div className="flex-1 w-full max-w-4xl flex flex-col items-center">
-            <TypingText text={SAMPLE_TEXT} typed={typed} />
+            <TypingText text={challengeText} typed={typed} />
           </div>
           <ComboDisplay combo={combo} best={combo} />
         </div>
@@ -368,15 +406,10 @@ const BattlePage = () => {
           <StatsPanel 
             wpm={wpm.toString()} 
             accuracy={`${accuracy}%`} 
-            chars={`${typed.length}/${SAMPLE_TEXT.length}`} 
+            chars={`${typed.length}/${challengeText.length}`} 
             combo={`×${combo}`} 
           />
           <VirtualKeyboard pressedKey={pressedKey} />
-          <div className="mt-4 flex gap-4">
-            <ArcadeButton color="pink" className="text-sm px-6 py-2" onClick={handleRestart}>
-              FORFEIT & RESTART
-            </ArcadeButton>
-          </div>
         </div>
       </div>
 
