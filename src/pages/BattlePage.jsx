@@ -8,6 +8,8 @@ import OpponentActivity from '../components/battle/OpponentActivity';
 import ComboDisplay from '../components/battle/ComboDisplay';
 import ArcadeText from '../components/arcade/ArcadeText';
 import ArcadeButton from '../components/arcade/ArcadeButton';
+import RankBadge from '../components/battle/RankBadge';
+import PowerUpSlot from '../components/battle/PowerUpSlot';
 import { useNavigate } from 'react-router-dom';
 import useMatchStore from '../store/useMatchStore';
 import { playSound } from '../lib/sounds';
@@ -55,7 +57,7 @@ const BattlePage = () => {
   const maxComboRef = useRef(0);
 
   // Helper to transition to results
-  const endGame = useCallback((isWinner, isSurrender = false) => {
+  const endGame = useCallback((isWinner, isSurrender = false, isDraw = false) => {
     setIsMatchActive(false);
     setBattlePhase('finished');
     
@@ -66,6 +68,7 @@ const BattlePage = () => {
       state: {
         isWinner,
         surrendered: isSurrender,
+        isDraw,
         wpm,
         accuracy: finalAccuracy,
         maxCombo: maxComboRef.current,
@@ -132,14 +135,14 @@ const BattlePage = () => {
   // Check for opponent finish or surrender
   useEffect(() => {
     if (opponentStats.progress === 100 && battlePhase === 'playing') {
-      endGame(false);
+      endGame(false, false, false);
     }
   }, [opponentStats.progress, battlePhase, endGame]);
 
   useEffect(() => {
     if (status === 'opponent_surrendered' && battlePhase === 'playing') {
       // Opponent left the match, you win!
-      endGame(true, true);
+      endGame(true, true, false);
     }
   }, [status, battlePhase, endGame]);
 
@@ -283,7 +286,7 @@ const BattlePage = () => {
       broadcastStats({ progress: newProgress, wpm: newWpm, accuracy: newAcc, combo: newCombo });
       
       if (next === challengeText) {
-         setTimeout(() => endGame(true), 300);
+         setTimeout(() => endGame(true, false, false), 300);
       }
       
       return next;
@@ -305,8 +308,9 @@ const BattlePage = () => {
             clearInterval(interval);
             // Time ran out! Compare progress to decide winner
             const finalProgress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
-            const isWinner = finalProgress >= opponentStats.progress;
-            endGame(isWinner);
+            const isWinner = finalProgress > opponentStats.progress;
+            const isDraw = finalProgress === opponentStats.progress;
+            endGame(isWinner, false, isDraw);
             return 0;
           }
           return prev - 1;
@@ -481,7 +485,11 @@ const BattlePage = () => {
               <TypingText text={challengeText} typed={typed} />
             </div>
           </div>
-          <ComboDisplay combo={combo} best={maxComboRef.current} heldPowerUp={heldPowerUp} />
+          <div className="flex flex-col gap-4 items-center">
+            <RankBadge wpm={wpm} />
+            <ComboDisplay combo={combo} best={maxComboRef.current} />
+            <PowerUpSlot heldPowerUp={heldPowerUp} />
+          </div>
         </div>
         
         {/* Bottom Section */}

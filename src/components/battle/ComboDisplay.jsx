@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import ArcadeText from '../arcade/ArcadeText';
 
-const ComboDisplay = ({ combo = 0, best = 0, heldPowerUp = null }) => {
+const ComboDisplay = ({ combo = 0, best = 0 }) => {
   const comboRef = useRef(null);
 
   useEffect(() => {
@@ -56,16 +56,8 @@ const ComboDisplay = ({ combo = 0, best = 0, heldPowerUp = null }) => {
         ></div>
       </div>
       <div className="text-[10px] text-[var(--color-neon-purple)] font-[family-name:var(--font-arcade)] z-10 mb-2">
-        {combo > 0 && combo % 20 === 0 ? 'POWER READY!' : 'POWER PROGRESS'}
+        POWER PROGRESS
       </div>
-
-      {/* Held Power-Up */}
-      {heldPowerUp && (
-        <div className="w-full p-2 border border-[var(--color-neon-cyan)] bg-black/50 rounded-lg flex flex-col items-center justify-center gap-1 z-10 animate-pulse">
-          <ArcadeText color="cyan" className="text-[10px]">PRESS [ENTER]</ArcadeText>
-          <ArcadeText color="white" glow className="text-sm uppercase tracking-widest">{heldPowerUp}</ArcadeText>
-        </div>
-      )}
 
       <div className="w-full h-[1px] bg-white/10 my-2 z-10"></div>
 
