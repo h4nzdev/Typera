@@ -122,13 +122,11 @@ const useMatchStore = create((set, get) => ({
 
   setLocalReady: async () => {
     set({ localReady: true });
-    const { channel, myId } = get();
+    const { channel, isHost } = get();
     if (channel) {
-      await channel.send({
-        type: 'broadcast',
-        event: 'player_ready',
-        payload: { id: myId }
-      });
+      // Use presence (not broadcast) so late-arriving players can still see this ready state
+      const { playerName } = (await import('../store/useUserStore')).default.getState();
+      await channel.track({ isHost, playerName: playerName || 'PLAYER', isReady: true });
     }
   },
 
@@ -200,6 +198,17 @@ const useMatchStore = create((set, get) => ({
              set({ challengeWords: currentWords });
            }
         }
+
+        // Presence-based ready detection (replaces fire-and-forget player_ready broadcast)
+        // This fires whenever any presence updates, so late-arriving players immediately
+        // see if their opponent is already ready.
+        if (connectedPlayers.length === 2) {
+          const myId = get().myId;
+          const me = connectedPlayers.find(p => p.id === myId);
+          const opponent = connectedPlayers.find(p => p.id !== myId);
+          if (me?.isReady) set({ localReady: true });
+          if (opponent?.isReady) set({ opponentReady: true });
+        }
       })
       .on('broadcast', { event: 'match_setup' }, (payload) => {
         set({ 
@@ -223,11 +232,6 @@ const useMatchStore = create((set, get) => ({
             set({ activeDebuff: null });
           }
         }, duration);
-      })
-      .on('broadcast', { event: 'player_ready' }, (payload) => {
-        if (payload.payload.id !== get().myId) {
-          set({ opponentReady: true });
-        }
       })
       .on('broadcast', { event: 'stats_update' }, (payload) => {
         if (payload.payload.id !== get().myId) {
@@ -268,6 +272,14 @@ const useMatchStore = create((set, get) => ({
       opponentReady: false,
     });
     const { isHost, channel, category, gameMode } = get();
+    // Reset presence isReady so both players must re-confirm ready for next round
+    if (channel) {
+      const resetPresence = async () => {
+        const { playerName } = (await import('../store/useUserStore')).default.getState();
+        await channel.track({ isHost, playerName: playerName || 'PLAYER', isReady: false });
+      };
+      resetPresence();
+    }
     if (isHost && channel) {
       const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
       set({ challengeWords: newWords });

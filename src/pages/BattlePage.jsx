@@ -9,6 +9,7 @@ import ComboDisplay from '../components/battle/ComboDisplay';
 import ArcadeText from '../components/arcade/ArcadeText';
 import ArcadeButton from '../components/arcade/ArcadeButton';
 import PowerUpSlot from '../components/battle/PowerUpSlot';
+import DebuffBanner from '../components/battle/DebuffBanner';
 import { useNavigate } from 'react-router-dom';
 import useMatchStore from '../store/useMatchStore';
 import { playSound } from '../lib/sounds';
@@ -465,6 +466,9 @@ const BattlePage = () => {
         maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 85%)'
       }} />
       
+      {/* Debuff Banner — appears on YOUR screen when opponent hits you */}
+      <DebuffBanner activeDebuff={activeDebuff} />
+
       {/* Pause Modal Overlay */}
       {isPaused && (
         <div className="absolute inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center backdrop-blur-md">
