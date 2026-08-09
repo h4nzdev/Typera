@@ -626,25 +626,46 @@ const BattlePage = () => {
 
           {/* Main Typing Section */}
           <div className={`w-full flex flex-col items-center relative transition-transform ${shake ? 'animate-shake' : ''}`}>
+            {/* ── LITERAL ARCADE GLITCH OVERLAY ── */}
             {activeDebuff?.type === 'glitch' && (
               <>
-                {/* ── LITERAL ARCADE GLITCH OVERLAY ── */}
-                {/* 1. Full-screen Chromatic CRT static noise */}
                 <div className="absolute -inset-4 z-50 pointer-events-none mix-blend-difference bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-80 animate-glitch-flicker" />
-
-                {/* 2. Moving Horizontal Glitch Slice Bar */}
                 <div className="absolute inset-x-0 top-1/4 h-12 bg-cyan-500/20 z-50 pointer-events-none mix-blend-color-dodge animate-glitch-slice border-y border-[var(--color-neon-cyan)] flex items-center justify-center">
                   <span className="font-[family-name:var(--font-arcade)] text-xs text-[var(--color-neon-yellow)] tracking-[0.4em] bg-black/80 px-4 py-0.5 border border-yellow-400 animate-pulse">
                     ⚠ SYSTEM ERROR // KEYBOARD CORRUPTED ⚠
                   </span>
                 </div>
-
-                {/* 3. Second offset slice bar */}
                 <div className="absolute inset-x-0 bottom-1/3 h-8 bg-pink-500/20 z-50 pointer-events-none mix-blend-hard-light animate-glitch-slice border-y border-[var(--color-neon-pink)]" />
               </>
             )}
 
-            <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-md opacity-30' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-cyber-glitch scale-[1.02]' : ''}`}>
+            {/* ── LITERAL BLIND OVERLAY (TOTAL PITCH-BLACK BLACKOUT) ── */}
+            {activeDebuff?.type === 'blind' && (
+              <div className="absolute inset-0 z-50 pointer-events-none bg-black/98 rounded-xl border-4 border-[var(--color-neon-purple)] flex flex-col items-center justify-center gap-3 backdrop-blur-3xl animate-blind-blackout p-6 shadow-[0_0_60px_rgba(176,38,255,0.8)]">
+                <span className="text-6xl animate-pulse filter drop-shadow-[0_0_15px_#b026ff]">👁</span>
+                <span className="font-[family-name:var(--font-arcade)] text-2xl text-[var(--color-neon-purple)] tracking-[0.3em] text-center text-glow-purple animate-pulse">
+                  VISUAL SENSORS OFFLINE
+                </span>
+                <span className="font-[family-name:var(--font-arcade)] text-xs text-white/50 tracking-widest uppercase">
+                  [ BLIND DEBUFF ACTIVE // BLINDED FOR 3 SECONDS ]
+                </span>
+              </div>
+            )}
+
+            {/* ── HIGH-VOLTAGE STEAL OVERLAY ── */}
+            {activeDebuff?.type === 'steal' && (
+              <div className="absolute inset-0 z-50 pointer-events-none rounded-xl border-4 border-[var(--color-neon-red)] flex flex-col items-center justify-center gap-3 animate-electric-siphon p-6 bg-red-950/40 backdrop-blur-sm">
+                <span className="text-6xl animate-bounce filter drop-shadow-[0_0_20px_#ff003c]">⚡</span>
+                <span className="font-[family-name:var(--font-arcade)] text-2xl text-[var(--color-neon-red)] tracking-[0.3em] text-center text-glow-red animate-pulse">
+                  PROGRESS STOLEN!
+                </span>
+                <span className="font-[family-name:var(--font-arcade)] text-xs text-yellow-300 tracking-widest uppercase bg-black/80 px-4 py-1 border border-red-500">
+                  ⚡ OPPONENT SIPHONED YOUR TYPING PROGRESS ⚡
+                </span>
+              </div>
+            )}
+
+            <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-2xl opacity-5 scale-95 pointer-events-none select-none' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-cyber-glitch scale-[1.02]' : ''} ${activeDebuff?.type === 'steal' ? 'animate-shake border-red-500' : ''}`}>
               <TypingText text={challengeText} words={challengeWords} typed={typed} />
             </div>
           </div>

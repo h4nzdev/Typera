@@ -152,4 +152,27 @@
   .animate-glitch-flicker {
     animation: glitchFlicker 0.15s infinite steps(1);
   }
+
+  /* ── Blind Debuff Keyframes ── */
+  @keyframes blindFogPulse {
+    0%, 100% { opacity: 0.98; filter: contrast(300%) brightness(0%); }
+    50%       { opacity: 0.95; filter: contrast(400%) brightness(5%); }
+  }
+
+  .animate-blind-blackout {
+    animation: blindFogPulse 0.4s infinite ease-in-out;
+  }
+
+  /* ── Steal Debuff Keyframes ── */
+  @keyframes electricSiphon {
+    0%   { box-shadow: 0 0 20px #ff003c, inset 0 0 30px #ff003c; filter: brightness(1); }
+    25%  { box-shadow: 0 0 60px #fffb00, inset 0 0 70px #fffb00; filter: brightness(1.6) saturate(2); }
+    50%  { box-shadow: 0 0 30px #ff007f, inset 0 0 40px #ff007f; filter: brightness(0.8); }
+    75%  { box-shadow: 0 0 80px #ff003c, inset 0 0 90px #ff003c; filter: brightness(1.8) saturate(3); }
+    100% { box-shadow: 0 0 20px #ff003c, inset 0 0 30px #ff003c; filter: brightness(1); }
+  }
+
+  .animate-electric-siphon {
+    animation: electricSiphon 0.25s infinite linear;
+  }
 }
