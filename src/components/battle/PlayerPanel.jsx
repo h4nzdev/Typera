@@ -30,9 +30,15 @@ const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', rever
 
   return (
     <div className={`flex items-start gap-4 md:gap-6 ${reverse ? 'flex-row-reverse' : 'flex-row'}`}>
-      {/* Avatar Box */}
-      <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl border-2 ${borderColor} bg-black/80 flex items-center justify-center overflow-hidden shrink-0 relative`}>
-        {/* Simple geometric face as placeholder */}
+      {/* Avatar Box — pixel art style */}
+      <div className={`w-20 h-20 md:w-24 md:h-24 border-2 ${borderColor} bg-black flex items-center justify-center overflow-hidden shrink-0 relative`}
+        style={{ imageRendering: 'pixelated', boxShadow: color === 'cyan' ? '0 0 12px rgba(0,243,255,0.3), inset 0 0 12px rgba(0,243,255,0.05)' : '0 0 12px rgba(255,0,127,0.3), inset 0 0 12px rgba(255,0,127,0.05)' }}>
+        {/* Pixel corner accents */}
+        <div className={`absolute top-0 left-0 w-2 h-2 ${barColor}`} />
+        <div className={`absolute top-0 right-0 w-2 h-2 ${barColor}`} />
+        <div className={`absolute bottom-0 left-0 w-2 h-2 ${barColor}`} />
+        <div className={`absolute bottom-0 right-0 w-2 h-2 ${barColor}`} />
+        {/* Simple geometric face */}
         <div className={`flex flex-col items-center gap-1 ${glowShadow}`}>
            <div className={`w-10 h-6 md:w-12 md:h-8 ${barColor} rounded-t-full relative`}>
              <div className="absolute top-2 left-2 w-2 h-2 bg-black rounded-full"></div>

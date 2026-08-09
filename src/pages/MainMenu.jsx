@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef, useState, useEffect } from 'react';
+import logoPng from '../assets/logo.png';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import ArcadeText from '../components/arcade/ArcadeText';
@@ -221,15 +222,18 @@ const MainMenu = () => {
         <div className="z-10 flex flex-col items-center gap-8 w-full max-w-lg px-4">
 
           {/* Logo */}
-          <div className="mm-logo text-center">
-            <h1 className="font-[family-name:var(--font-arcade)] text-5xl md:text-7xl tracking-widest leading-none"
-              style={{ color: '#00f3ff', textShadow: '0 0 10px #00f3ff, 0 0 30px #00f3ff, 0 0 60px rgba(0,243,255,0.5)' }}>
-              TYPE<span style={{ color: '#ff007f', textShadow: '0 0 10px #ff007f, 0 0 30px #ff007f' }}>//</span>BATTLE
-            </h1>
-            <p className="font-[family-name:var(--font-arcade)] text-lg tracking-[0.4em] mt-2"
-              style={{ color: '#b026ff', textShadow: '0 0 8px #b026ff' }}>
-              1V1 TYPING ARENA
-            </p>
+          <div className="mm-logo flex justify-center">
+            <img
+              src={logoPng}
+              alt="TYPE//BATTLE"
+              className="w-auto select-none pointer-events-none"
+              style={{
+                maxHeight: '220px',
+                filter: 'drop-shadow(0 0 18px rgba(0,243,255,0.5)) drop-shadow(0 0 40px rgba(255,0,127,0.35))',
+                animation: 'logoFloat 3s ease-in-out infinite',
+              }}
+              draggable={false}
+            />
           </div>
 
           {/* Pixel-border arcade menu panel */}
@@ -311,6 +315,12 @@ const MainMenu = () => {
           </div>
         </div>
       )}
+    <style>{`
+      @keyframes logoFloat {
+        0%, 100% { transform: translateY(0px); filter: drop-shadow(0 0 18px rgba(0,243,255,0.5)) drop-shadow(0 0 40px rgba(255,0,127,0.35)); }
+        50% { transform: translateY(-10px); filter: drop-shadow(0 0 28px rgba(0,243,255,0.8)) drop-shadow(0 0 55px rgba(255,0,127,0.55)); }
+      }
+    `}</style>
     </div>
   );
 };

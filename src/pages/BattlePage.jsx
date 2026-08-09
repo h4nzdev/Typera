@@ -455,49 +455,76 @@ const BattlePage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-black/50 overflow-hidden p-4 md:p-8 relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,243,255,0.03)_0%,transparent_80%)] pointer-events-none"></div>
+    <div className="min-h-screen flex flex-col overflow-hidden p-4 md:p-8 relative" style={{ background: 'radial-gradient(ellipse at center, #0a0015 0%, #05050A 70%)' }}>
+      {/* Scanlines */}
+      <div className="pointer-events-none absolute inset-0 z-50" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)' }} />
+      {/* Neon pixel grid */}
+      <div className="pointer-events-none absolute inset-0" style={{
+        backgroundImage: `linear-gradient(rgba(0,243,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0,243,255,0.025) 1px, transparent 1px)`,
+        backgroundSize: '48px 48px',
+        maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 85%)'
+      }} />
       
       {/* Pause Modal Overlay */}
       {isPaused && (
-        <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
-          <ArcadeText color="cyan" glow className="text-6xl mb-8">PAUSED</ArcadeText>
-          <div className="flex flex-col gap-4 w-64">
-            <ArcadeButton color="cyan" onClick={() => { playSound('click'); setPaused(false); }}>
-              RESUME
-            </ArcadeButton>
-            <ArcadeButton color="pink" onClick={handleRestart}>
-              RESTART
-            </ArcadeButton>
-            <ArcadeButton color="white" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>
-              {battlePhase === 'playing' ? 'SURRENDER' : 'MAIN MENU'}
-            </ArcadeButton>
+        <div className="absolute inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center backdrop-blur-md">
+          <div className="relative border-4 border-[var(--color-neon-cyan)] p-1" style={{ boxShadow: '0 0 0 2px #000, 0 0 40px rgba(0,243,255,0.4)' }}>
+            <div className="absolute -top-2 -left-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
+            <div className="absolute -top-2 -right-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
+            <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
+            <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
+            <div className="border-2 border-black/50 bg-black/90 px-16 py-10 flex flex-col items-center gap-6">
+              <ArcadeText color="cyan" glow className="text-6xl">PAUSED</ArcadeText>
+              <div className="flex flex-col gap-4 w-64">
+                <ArcadeButton color="cyan" onClick={() => { playSound('click'); setPaused(false); }}>RESUME</ArcadeButton>
+                <ArcadeButton color="pink" onClick={handleRestart}>RESTART</ArcadeButton>
+                <ArcadeButton color="white" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>
+                  {battlePhase === 'playing' ? 'SURRENDER' : 'MAIN MENU'}
+                </ArcadeButton>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Cancelled Modal Overlay */}
       {status === 'cancelled' && (
-        <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center backdrop-blur-sm">
-          <ArcadeText color="red" glow className="text-5xl md:text-7xl mb-4 text-center">MATCH CANCELLED</ArcadeText>
-          <ArcadeText color="pink" className="text-xl mb-8 tracking-widest text-center">HOST DISCONNECTED</ArcadeText>
-          <ArcadeButton color="cyan" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>
-            MAIN MENU
-          </ArcadeButton>
+        <div className="absolute inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center backdrop-blur-md">
+          <div className="relative border-4 border-[var(--color-neon-red)] p-1" style={{ boxShadow: '0 0 0 2px #000, 0 0 40px rgba(255,0,60,0.4)' }}>
+            <div className="absolute -top-2 -left-2 w-4 h-4 bg-[var(--color-neon-red)]" />
+            <div className="absolute -top-2 -right-2 w-4 h-4 bg-[var(--color-neon-red)]" />
+            <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-[var(--color-neon-red)]" />
+            <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-[var(--color-neon-red)]" />
+            <div className="border-2 border-black/50 bg-black/90 px-16 py-10 flex flex-col items-center gap-6">
+              <ArcadeText color="red" glow className="text-5xl md:text-7xl text-center">MATCH CANCELLED</ArcadeText>
+              <ArcadeText color="pink" className="text-xl tracking-widest text-center">HOST DISCONNECTED</ArcadeText>
+              <ArcadeButton color="cyan" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>MAIN MENU</ArcadeButton>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Ready Overlay */}
       {battlePhase === 'waiting' && !isPaused && (
-        <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
+        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md">
           {!localReady ? (
-            <ArcadeButton color="cyan" className="text-4xl px-16 py-8 animate-pulse" onClick={setLocalReady}>
-              READY
-            </ArcadeButton>
+            <div className="relative border-4 border-[var(--color-neon-cyan)] p-1" style={{ boxShadow: '0 0 0 2px #000, 0 0 60px rgba(0,243,255,0.5)' }}>
+              <div className="absolute -top-2 -left-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
+              <div className="absolute -top-2 -right-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
+              <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
+              <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
+              <div className="border-2 border-black/50 bg-black/90 px-20 py-12 flex flex-col items-center gap-4">
+                <ArcadeText color="yellow" glow className="text-2xl tracking-widest">PLAYER CONNECTED!</ArcadeText>
+                <ArcadeButton color="cyan" className="text-4xl px-16 py-8 animate-pulse" onClick={setLocalReady}>READY</ArcadeButton>
+              </div>
+            </div>
           ) : (
-            <ArcadeText color="pink" glow className="text-3xl animate-pulse">
-              WAITING FOR OPPONENT...
-            </ArcadeText>
+            <div className="flex flex-col items-center gap-6">
+              <ArcadeText color="pink" glow className="text-3xl animate-pulse">WAITING FOR OPPONENT...</ArcadeText>
+              <div className="w-48 h-2 bg-black border border-[var(--color-neon-pink)] overflow-hidden">
+                <div className="h-full bg-[var(--color-neon-pink)] animate-[scan_1s_linear_infinite]" style={{ width: '40%' }} />
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -621,18 +648,24 @@ const BattlePage = () => {
       {/* Badges UI - Bottom Left */}
       <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 z-20 flex gap-4 pointer-events-none">
         {[1, 2, 3].map((badge) => (
-          <div key={badge} className="w-10 h-10 md:w-14 md:h-14 rounded-full border-2 border-[var(--color-neon-cyan)] bg-black/50 flex items-center justify-center shadow-[0_0_10px_var(--color-neon-cyan-muted),inset_0_0_10px_var(--color-neon-cyan-muted)]">
-            <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-[var(--color-neon-cyan-muted)]"></div>
+          <div key={badge} className="w-10 h-10 md:w-14 md:h-14 border-2 border-[var(--color-neon-cyan)] bg-black flex items-center justify-center"
+            style={{ boxShadow: '0 0 8px rgba(0,243,255,0.3), inset 0 0 8px rgba(0,243,255,0.05)' }}>
+            <div className="w-2 h-2 md:w-3 md:h-3 bg-[var(--color-neon-cyan-muted)]"></div>
           </div>
         ))}
       </div>
 
       {/* Trophy UI - Bottom Right */}
       <div className="absolute bottom-4 md:bottom-8 right-4 md:right-8 z-20 flex items-center justify-center pointer-events-none">
-        <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl border-2 border-[var(--color-neon-yellow)] bg-yellow-900/30 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(255,251,0,0.4),inset_0_0_10px_rgba(255,251,0,0.2)]">
+        <div className="w-12 h-12 md:w-16 md:h-16 border-2 border-[var(--color-neon-yellow)] bg-black flex flex-col items-center justify-center"
+          style={{ boxShadow: '0 0 15px rgba(255,251,0,0.3), inset 0 0 10px rgba(255,251,0,0.1)' }}>
           <span className="text-xl md:text-3xl filter drop-shadow-[0_0_5px_rgba(255,251,0,0.8)]">🏆</span>
         </div>
       </div>
+
+      <style>{`
+        @keyframes scan { 0% { transform: translateX(-100%) } 100% { transform: translateX(350%) } }
+      `}</style>
     </div>
   );
 };
