@@ -13,6 +13,7 @@ const MatchResultPage = () => {
   const containerRef = useRef(null);
   
   const { playerName } = useUserStore();
+  const { status, leaveMatch, channel } = useMatchStore();
 
   const [submitted, setSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -26,6 +27,13 @@ const MatchResultPage = () => {
     maxCombo: 42
   };
   const { isWinner, wpm, accuracy, maxCombo, isDraw } = matchData;
+
+  useEffect(() => {
+    if (status === 'cancelled' && matchData.mode !== 'solo') {
+      leaveMatch();
+      navigate('/');
+    }
+  }, [status, leaveMatch, navigate, matchData.mode]);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -130,7 +138,7 @@ const MatchResultPage = () => {
         </div>
 
         <div className="flex flex-col items-stretch max-w-fit mx-auto mt-2">
-          {isWinner && !isDraw && matchData.mode !== 'solo' && !submitted && (
+          {isWinner && !isDraw && matchData.mode !== 'solo' && !submitted && (wpm > 0 || accuracy > 0) && (
             <div className="flex flex-col items-center gap-4 mb-8">
               <ArcadeButton color="cyan" className="py-3 px-12 flex items-center justify-center shrink-0" onClick={handleSave} disabled={isSaving || !playerName}>
                 {isSaving ? 'SAVING...' : 'SAVE TO LEADERBOARD'}
@@ -139,7 +147,7 @@ const MatchResultPage = () => {
             </div>
           )}
 
-          {(!isWinner || isDraw || matchData.mode === 'solo' || submitted) && (
+          {(!isWinner || isDraw || matchData.mode === 'solo' || submitted || (wpm === 0 && accuracy === 0)) && (
             <div className="flex justify-center mb-8">
               <ArcadeText color="pink" className="text-xl">KEEP TRAINING!</ArcadeText>
             </div>
@@ -171,7 +179,14 @@ const MatchResultPage = () => {
               </>
             )}
             <ArcadeButton color="white" className="whitespace-nowrap text-white border-white hover:bg-white/10 text-shadow-none shadow-none text-glow-none border-glow-none" onClick={() => {
-              useMatchStore.getState().leaveMatch();
+              if (matchData.mode !== 'solo' && channel) {
+                channel.send({
+                  type: 'broadcast',
+                  event: 'match_status',
+                  payload: { status: 'cancelled' }
+                });
+              }
+              leaveMatch();
               navigate('/');
             }} disabled={isSaving}>
               MAIN MENU

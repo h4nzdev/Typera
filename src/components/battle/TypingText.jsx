@@ -2,6 +2,19 @@ import React from 'react';
 
 const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", words = null, typed = null }) => {
   const textArray = text.split('');
+  const activeCharRef = React.useRef(null);
+  const containerRef = React.useRef(null);
+  
+  React.useEffect(() => {
+    if (activeCharRef.current && containerRef.current) {
+      const container = containerRef.current;
+      const el = activeCharRef.current;
+      container.scrollTo({
+        top: el.offsetTop - container.clientHeight / 2 + 15,
+        behavior: 'smooth'
+      });
+    }
+  }, [typed]);
   
   const getCharState = (index) => {
     if (typed === null) {
@@ -27,7 +40,10 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
       </div>
       
       {/* Target Text Box */}
-      <div className="w-full bg-black/60 border border-[var(--color-neon-purple)] rounded-xl p-6 shadow-[0_0_15px_var(--color-neon-purple-muted)]">
+      <div 
+        ref={containerRef}
+        className="w-full bg-black/60 border border-[var(--color-neon-purple)] rounded-xl p-6 shadow-[0_0_15px_var(--color-neon-purple-muted)] h-[160px] overflow-hidden relative"
+      >
         <div className="flex flex-wrap gap-x-0.5 gap-y-3 font-[family-name:var(--font-mono)] text-xl md:text-2xl leading-relaxed tracking-wider">
           {(() => {
             const wordsWithIndices = [];
@@ -69,7 +85,11 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                     }
                     
                     return (
-                      <span key={absIndex} className={`px-[1px] relative ${className}`}>
+                      <span 
+                        key={absIndex} 
+                        ref={state === 'current' ? activeCharRef : null}
+                        className={`px-[1px] relative ${className}`}
+                      >
                         {char}
                       </span>
                     );
@@ -92,7 +112,11 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                     }
 
                     return (
-                      <span key={absIndex} className={`px-[2px] ${className}`}>
+                      <span 
+                        key={absIndex} 
+                        ref={state === 'current' ? activeCharRef : null}
+                        className={`px-[2px] ${className}`}
+                      >
                         {state === 'incorrect' ? '_' : '\u00A0'}
                       </span>
                     );
