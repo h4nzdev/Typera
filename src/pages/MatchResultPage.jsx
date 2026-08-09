@@ -19,12 +19,14 @@ const MatchResultPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
-  // Fallback to mock data if accessed directly for testing
   const matchData = state || {
     isWinner: true,
-    wpm: 94,
-    accuracy: 98,
-    maxCombo: 42
+    wpm: 25,
+    accuracy: 94,
+    maxCombo: 45,
+    mode: 'classic_booth',
+    myPoints: 3,
+    opponentPoints: 1
   };
   const { isWinner, wpm, accuracy, maxCombo, isDraw, myPoints, opponentPoints } = matchData;
   const isMatchOver = matchData.mode === 'classic_booth' ? (myPoints >= 3 || opponentPoints >= 3) : true;
@@ -182,7 +184,8 @@ const MatchResultPage = () => {
         </div>
 
         <div className="flex flex-col items-stretch max-w-fit mx-auto mt-2">
-          {isWinner && !isDraw && matchData.mode !== 'solo' && !submitted && (wpm > 0 || accuracy > 0) && (
+          {/* SAVE TO LEADERBOARD: only for non-booth, or final booth victory */}
+          {isWinner && !isDraw && matchData.mode !== 'solo' && !submitted && (wpm > 0 || accuracy > 0) && (matchData.mode !== 'classic_booth' || isMatchOver) && (
             <div className="flex flex-col items-center gap-4 mb-8">
               <ArcadeButton color="cyan" className="py-3 px-12 flex items-center justify-center shrink-0" onClick={handleSave} disabled={isSaving || !playerName}>
                 {isSaving ? 'SAVING...' : 'SAVE TO LEADERBOARD'}
@@ -191,13 +194,14 @@ const MatchResultPage = () => {
             </div>
           )}
 
-          {(!isWinner || isDraw || matchData.mode === 'solo' || submitted || (wpm === 0 && accuracy === 0)) && (
+          {(!isWinner || isDraw || matchData.mode === 'solo' || submitted || (wpm === 0 && accuracy === 0)) && isMatchOver && (
             <div className="flex justify-center mb-8">
               <ArcadeText color="pink" className="text-xl">KEEP TRAINING!</ArcadeText>
             </div>
           )}
 
           <div className="result-btns flex flex-wrap justify-center gap-4 md:gap-6 mt-4">
+            {/* BOOTH: intermediate round — NEXT ROUND + SURRENDER only */}
             {matchData.mode === 'classic_booth' && !isMatchOver && (
               <>
                 <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
@@ -222,6 +226,7 @@ const MatchResultPage = () => {
               </>
             )}
 
+            {/* NON-BOOTH: Play Again / New Match / Leaderboard */}
             {matchData.mode !== 'classic_booth' && (
               <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
                 if (matchData.mode === 'solo') {
@@ -248,21 +253,31 @@ const MatchResultPage = () => {
                 </ArcadeButton>
               </>
             )}
-            <ArcadeButton color="white" className="whitespace-nowrap text-white border-white hover:bg-white/10 text-shadow-none shadow-none text-glow-none border-glow-none" onClick={() => {
-              if (matchData.mode !== 'solo' && channel) {
-                channel.send({
-                  type: 'broadcast',
-                  event: 'match_status',
-                  payload: { status: 'cancelled' }
-                });
-              }
-              leaveMatch();
-              navigate('/');
-            }} disabled={isSaving}>
-              MAIN MENU
-            </ArcadeButton>
+
+            {/* MAIN MENU: show for non-booth modes, or when the booth match is fully over */}
+            {(matchData.mode !== 'classic_booth' || isMatchOver) && (
+              <ArcadeButton color="white" className="whitespace-nowrap text-white border-white hover:bg-white/10 text-shadow-none shadow-none text-glow-none border-glow-none" onClick={() => {
+                if (matchData.mode !== 'solo' && channel) {
+                  channel.send({
+                    type: 'broadcast',
+                    event: 'match_status',
+                    payload: { status: 'cancelled' }
+                  });
+                }
+                leaveMatch();
+                navigate('/');
+              }} disabled={isSaving}>
+                MAIN MENU
+              </ArcadeButton>
+            )}
           </div>
         </div>
+      </div>
+      {/* DEBUG OVERLAY */}
+      <div className="absolute bottom-0 right-0 bg-black text-green-500 text-[10px] font-mono p-2 z-[9999] opacity-50 text-right">
+        DEBUG RESULT:<br/>
+        mode: {matchData.mode}<br/>
+        myPts: {matchData.myPoints} | oppPts: {matchData.opponentPoints}
       </div>
     </div>
   );

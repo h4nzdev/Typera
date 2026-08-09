@@ -78,16 +78,17 @@ const useMatchStore = create((set, get) => ({
     }
   },
 
-  setGameMode: (gameMode) => {
+  setGameMode: (newMode) => {
     const { isHost, channel, category } = get();
-    if (!isHost) return;
-    const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
-    set({ gameMode, challengeWords: newWords });
-    if (channel) {
+    console.log('[STORE] setGameMode called:', newMode, '| isHost:', isHost);
+    // Allow setting mode before channel exists (e.g., Booth setup)
+    const newWords = generateChallenge(newMode === 'deathmatch' ? 30 : 15, category, newMode);
+    set({ gameMode: newMode, challengeWords: newWords });
+    if (isHost && channel) {
       channel.send({
         type: 'broadcast',
         event: 'match_setup',
-        payload: { challengeWords: newWords, category, gameMode }
+        payload: { challengeWords: newWords, category, gameMode: newMode }
       });
     }
   },
@@ -233,10 +234,19 @@ const useMatchStore = create((set, get) => ({
         }
       })
       .on('broadcast', { event: 'round_winner' }, (payload) => {
-        if (payload.payload.id === get().myId) {
-          set((state) => ({ localPoints: state.localPoints + 1 }));
+        const winnerId = payload.payload.id;
+        const myId = get().myId;
+        console.log('[STORE] round_winner broadcast received | winnerId:', winnerId, '| myId:', myId, '| iAmWinner:', winnerId === myId);
+        // Only the OPPONENT updates from the broadcast to avoid double-counting
+        // (the winner already updated their own score locally in recordRoundWinner)
+        if (winnerId !== myId) {
+          // I am not the winner - the winner won this round against me
+          set((state) => {
+            console.log('[STORE] Incrementing opponentPoints to:', state.opponentPoints + 1);
+            return { opponentPoints: state.opponentPoints + 1 };
+          });
         } else {
-          set((state) => ({ opponentPoints: state.opponentPoints + 1 }));
+          console.log('[STORE] Ignoring own round_winner echo - already counted locally');
         }
       })
       .on('broadcast', { event: 'match_status' }, (payload) => {
@@ -244,7 +254,9 @@ const useMatchStore = create((set, get) => ({
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await newChannel.track({ isHost, joinedAt: Date.now() });
+          const { playerName } = (await import('../store/useUserStore')).default.getState();
+          console.log('[STORE] Subscribed. isHost:', isHost, '| gameMode:', get().gameMode, '| playerName:', playerName);
+          await newChannel.track({ isHost, joinedAt: Date.now(), playerName: playerName || 'PLAYER' });
         }
       });
   },
@@ -309,18 +321,21 @@ const useMatchStore = create((set, get) => ({
 
   recordRoundWinner: async (winnerId) => {
     const { channel } = get();
+    console.log('[STORE] recordRoundWinner called | winnerId:', winnerId, '| myId:', get().myId);
+    // Update the winner's own score locally immediately
+    if (winnerId === get().myId) {
+      set((state) => {
+        console.log('[STORE] Incrementing localPoints to:', state.localPoints + 1);
+        return { localPoints: state.localPoints + 1 };
+      });
+    }
+    // Broadcast so the opponent knows who won (their handler will update opponentPoints)
     if (channel) {
       await channel.send({
         type: 'broadcast',
         event: 'round_winner',
         payload: { id: winnerId },
       });
-      // also update locally immediately just in case
-      if (winnerId === get().myId) {
-        set((state) => ({ localPoints: state.localPoints + 1 }));
-      } else {
-        set((state) => ({ opponentPoints: state.opponentPoints + 1 }));
-      }
     }
   },
 

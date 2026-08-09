@@ -34,8 +34,12 @@ const BattlePage = () => {
     opponentDebuff,
     localPoints,
     opponentPoints,
-    myId
+    myId,
+    players
   } = useMatchStore();
+  
+  const hostPlayer = players.find(p => p.isHost);
+  const challengerPlayer = players.find(p => !p.isHost);
   
   const challengeText = React.useMemo(() => challengeWords.map(w => w.word).join(" "), [challengeWords]);
   
@@ -74,6 +78,8 @@ const BattlePage = () => {
     
     // If the player didn't type a single key, accuracy should be 0, not the default 100.
     const finalAccuracy = statsRef.current.totalKeystrokes === 0 ? 0 : accuracy;
+    
+    console.log('[BATTLE] endGame called | gameMode:', gameMode, '| isWinner:', isWinner, '| localPoints:', localPoints, '| opponentPoints:', opponentPoints);
     
     navigate('/result', {
       state: {
@@ -531,8 +537,8 @@ const BattlePage = () => {
           {/* Player Panels Row */}
           <div className="flex justify-between items-center w-full mt-2">
             <PlayerPanel 
-               player="PLAYER 1" 
-               name={isHost ? "HOST" : "CHALLENGER"} 
+               player={hostPlayer?.playerName || "PLAYER 1"} 
+               name="HOST" 
                isYou={isHost} 
                progress={isHost ? progress : opponentStats.progress} 
                wpm={isHost ? wpm : opponentStats.wpm} 
@@ -546,8 +552,8 @@ const BattlePage = () => {
               <ArcadeText as="div" color="cyan" glow className="text-7xl italic font-bold -skew-x-12">V<span className="text-[var(--color-neon-pink)]">S</span></ArcadeText>
             </div>
             <PlayerPanel 
-               player="PLAYER 2" 
-               name={!isHost ? "HOST" : "CHALLENGER"} 
+               player={challengerPlayer?.playerName || "PLAYER 2"} 
+               name="CHALLENGER" 
                isYou={!isHost} 
                progress={!isHost ? progress : opponentStats.progress} 
                wpm={!isHost ? wpm : opponentStats.wpm} 

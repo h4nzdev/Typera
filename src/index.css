@@ -20,6 +20,10 @@
 }
 
 @layer base {
+  * {
+    cursor: url('./assets/cursor.png'), auto !important;
+  }
+
   body {
     background-color: var(--color-arcade-bg);
     background-image: url('./assets/background/background.png');
