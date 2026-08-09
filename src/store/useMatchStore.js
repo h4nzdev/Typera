@@ -24,6 +24,21 @@ const generateChallenge = (count = 15, category = 'all', mode = 'race') => {
   return words;
 };
 
+// ─── Throttle helper ────────────────────────────────────────────────────────
+// Returns a function that fires at most once per `limit` ms.
+// Unlike lodash throttle, this one fires IMMEDIATELY on the first call,
+// then suppresses subsequent calls until the interval expires.
+function throttle(fn, limit) {
+  let lastCall = 0;
+  return (...args) => {
+    const now = Date.now();
+    if (now - lastCall >= limit) {
+      lastCall = now;
+      fn(...args);
+    }
+  };
+}
+
 const useMatchStore = create((set, get) => ({
   matchCode: null,
   isHost: false,
@@ -43,12 +58,16 @@ const useMatchStore = create((set, get) => ({
   activeDebuff: null,
   opponentDebuff: null,
 
+  // Internal throttled sender – replaced each time initMatch runs
+  _throttledBroadcast: null,
+
   setActiveDebuff: (debuff) => set({ activeDebuff: debuff }),
 
   sendPowerUp: async (type) => {
     const { channel } = get();
     if (channel) {
-      await channel.send({
+      // Fire-and-forget – no await needed for low-latency feel
+      channel.send({
         type: 'broadcast',
         event: 'match_powerup',
         payload: { type }
@@ -112,7 +131,7 @@ const useMatchStore = create((set, get) => ({
     set({ isPaused: paused });
     const { channel } = get();
     if (channel) {
-      await channel.send({
+      channel.send({
         type: 'broadcast',
         event: 'match_pause',
         payload: { isPaused: paused }
@@ -137,8 +156,15 @@ const useMatchStore = create((set, get) => ({
     }
 
     const myId = crypto.randomUUID();
+
+    // ── Channel config optimizations ──────────────────────────────────────────
+    // self_broadcast: false  → Supabase won't echo our own broadcasts back to us,
+    //                          removing one full round-trip from latency.
     const newChannel = supabase.channel(`match:${code}`, {
-      config: { presence: { key: myId } },
+      config: {
+        presence: { key: myId },
+        broadcast: { self: false, ack: false },
+      },
     });
 
     const initialWords = isHost ? generateChallenge(get().gameMode === 'deathmatch' ? 30 : 15, get().category, get().gameMode) : [];
@@ -157,6 +183,19 @@ const useMatchStore = create((set, get) => ({
       localPoints: 0,
       opponentPoints: 0,
     });
+
+    // ── Throttled broadcast sender ────────────────────────────────────────────
+    // Stats are sent at most once every 50ms (~20 Hz) per keystroke.
+    // This keeps updates smooth and frequent without flooding the channel.
+    const throttledSend = throttle((stats) => {
+      newChannel.send({
+        type: 'broadcast',
+        event: 'stats_update',
+        payload: { id: myId, stats },
+      });
+    }, 50);
+
+    set({ _throttledBroadcast: throttledSend });
 
     newChannel
       .on('presence', { event: 'sync' }, () => {
@@ -234,6 +273,7 @@ const useMatchStore = create((set, get) => ({
         }, duration);
       })
       .on('broadcast', { event: 'stats_update' }, (payload) => {
+        // Only accept updates from the opponent
         if (payload.payload.id !== get().myId) {
           set({ opponentStats: payload.payload.stats });
         }
@@ -262,7 +302,7 @@ const useMatchStore = create((set, get) => ({
     if (channel) {
       await channel.unsubscribe();
     }
-    set({ matchCode: null, channel: null, players: [], status: 'lobby', challengeWords: [] });
+    set({ matchCode: null, channel: null, players: [], status: 'lobby', challengeWords: [], _throttledBroadcast: null });
   },
 
   resetRound: () => {
@@ -298,7 +338,6 @@ const useMatchStore = create((set, get) => ({
       opponentReady: false,
       localPoints: 0,
       opponentPoints: 0,
-      // If host restarts, regenerate text for the new match and broadcast it
     });
     const { isHost, channel, category, gameMode } = get();
     if (isHost && channel) {
@@ -312,14 +351,12 @@ const useMatchStore = create((set, get) => ({
     }
   },
 
-  broadcastStats: async (stats) => {
-    const { channel, myId } = get();
-    if (channel) {
-      await channel.send({
-        type: 'broadcast',
-        event: 'stats_update',
-        payload: { id: myId, stats },
-      });
+  // ── High-frequency stats broadcast (throttled at 50ms = 20Hz) ──────────────
+  // Call this on EVERY keystroke. The throttle ensures we don't flood the channel.
+  broadcastStats: (stats) => {
+    const { _throttledBroadcast } = get();
+    if (_throttledBroadcast) {
+      _throttledBroadcast(stats);
     }
   },
 
@@ -343,7 +380,7 @@ const useMatchStore = create((set, get) => ({
     const { channel } = get();
     set({ status: newStatus });
     if (channel) {
-      await channel.send({
+      channel.send({
         type: 'broadcast',
         event: 'match_status',
         payload: { status: newStatus },

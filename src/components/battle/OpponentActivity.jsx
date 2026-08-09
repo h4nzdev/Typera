@@ -35,6 +35,7 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
   const bannerRef = useRef(null);
   const prevDebuffType = useRef(null);
   const [activeCfg, setActiveCfg] = useState(null);
+  const hideTimerRef = useRef(null);
 
   const [isHit, setIsHit] = React.useState(false);
   const prevHp = React.useRef(hp);
@@ -53,7 +54,6 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
   useEffect(() => {
     if (!debuff) {
       prevDebuffType.current = null;
-      setActiveCfg(null);
       return;
     }
     if (debuff.type === prevDebuffType.current) return;
@@ -61,16 +61,47 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
 
     const cfg = DEBUFF_CONFIG[debuff.type];
     if (!cfg) return;
+
+    // Clear any existing hide timer
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+
     setActiveCfg(cfg);
 
-    // Animate the banner
-    const el = bannerRef.current;
-    if (!el) return;
-    gsap.killTweensOf(el);
-    gsap.fromTo(el,
-      { scaleY: 0, opacity: 0, y: -20 },
-      { scaleY: 1, opacity: 1, y: 0, duration: 0.3, ease: 'back.out(2)' }
-    );
+    // Wait one frame for DOM, then animate IN
+    requestAnimationFrame(() => {
+      const el = bannerRef.current;
+      if (!el) return;
+      gsap.killTweensOf(el);
+      gsap.fromTo(
+        el,
+        { yPercent: -110, opacity: 0, scaleX: 0.85 },
+        {
+          yPercent: 0, opacity: 1, scaleX: 1,
+          duration: 0.35,
+          ease: 'back.out(1.8)',
+          onComplete: () => {
+            // Hold 2 seconds then animate OUT
+            hideTimerRef.current = setTimeout(() => {
+              gsap.to(el, {
+                yPercent: -115,
+                opacity: 0,
+                scaleX: 0.85,
+                duration: 0.4,
+                ease: 'power3.in',
+                onComplete: () => {
+                  setActiveCfg(null);
+                  prevDebuffType.current = null;
+                },
+              });
+            }, 2000);
+          },
+        }
+      );
+    });
+
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
   }, [debuff]);
 
   const isSteal  = debuff?.type === 'steal';
@@ -192,7 +223,7 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
         <div className="flex flex-col gap-1">
           <span className="text-[9px] font-[family-name:var(--font-arcade)] text-white/30 tracking-widest">TYPING...</span>
           <div className="w-full h-1.5 bg-white/10 overflow-hidden">
-            <div className={`h-full ${bgClass}`} style={{ width: `${progress}%`, transition: 'width 0.3s ease' }} />
+            <div className={`h-full ${bgClass}`} style={{ width: `${progress}%`, transition: 'width 0.15s linear' }} />
           </div>
         </div>
 
