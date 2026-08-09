@@ -51,40 +51,44 @@ const CreateMatchPage = () => {
           </div>
         </div>
 
-        {/* Game Mode Selector */}
-        <div className="flex flex-col items-center gap-3 w-full">
-          <ArcadeText color="pink" className="text-sm">GAME MODE</ArcadeText>
-          <div className="flex justify-center gap-4 w-full">
-            <button 
-              onClick={() => setGameMode('race')}
-              className={`px-4 py-2 font-[family-name:var(--font-arcade)] text-sm border ${gameMode === 'race' ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] shadow-[0_0_10px_var(--color-neon-cyan)]' : 'border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm flex-1`}
-            >
-              RACE
-            </button>
-            <button 
-              onClick={() => setGameMode('deathmatch')}
-              className={`px-4 py-2 font-[family-name:var(--font-arcade)] text-sm border ${gameMode === 'deathmatch' ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] shadow-[0_0_10px_var(--color-neon-cyan)]' : 'border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm flex-1`}
-            >
-              DEATHMATCH
-            </button>
-          </div>
-        </div>
+        {gameMode !== 'classic_booth' && (
+          <>
+            {/* Game Mode Selector */}
+            <div className="flex flex-col items-center gap-3 w-full">
+              <ArcadeText color="pink" className="text-sm">GAME MODE</ArcadeText>
+              <div className="flex justify-center gap-4 w-full">
+                <button 
+                  onClick={() => setGameMode('race')}
+                  className={`px-4 py-2 font-[family-name:var(--font-arcade)] text-sm border ${gameMode === 'race' ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] shadow-[0_0_10px_var(--color-neon-cyan)]' : 'border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm flex-1`}
+                >
+                  RACE
+                </button>
+                <button 
+                  onClick={() => setGameMode('deathmatch')}
+                  className={`px-4 py-2 font-[family-name:var(--font-arcade)] text-sm border ${gameMode === 'deathmatch' ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] shadow-[0_0_10px_var(--color-neon-cyan)]' : 'border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm flex-1`}
+                >
+                  DEATHMATCH
+                </button>
+              </div>
+            </div>
 
-        {/* Category Selector */}
-        <div className="flex flex-col items-center gap-3 w-full">
-          <ArcadeText color="pink" className="text-sm">WORD CATEGORY</ArcadeText>
-          <div className="flex flex-wrap justify-center gap-2 w-full max-w-[280px]">
-            {['all', 'common', 'it', 'gaming', 'tech', 'fun'].map(c => (
-              <button 
-                key={c}
-                onClick={() => setCategory(c)}
-                className={`px-3 py-1 font-[family-name:var(--font-arcade)] text-xs md:text-sm border ${category === c ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] shadow-[0_0_10px_var(--color-neon-cyan)]' : 'border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* Category Selector */}
+            <div className="flex flex-col items-center gap-3 w-full">
+              <ArcadeText color="pink" className="text-sm">WORD CATEGORY</ArcadeText>
+              <div className="flex flex-wrap justify-center gap-2 w-full max-w-[280px]">
+                {['all', 'common', 'it', 'gaming', 'tech', 'fun'].map(c => (
+                  <button 
+                    key={c}
+                    onClick={() => setCategory(c)}
+                    className={`px-3 py-1 font-[family-name:var(--font-arcade)] text-xs md:text-sm border ${category === c ? 'border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] shadow-[0_0_10px_var(--color-neon-cyan)]' : 'border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-400'} transition-all uppercase rounded-sm`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="flex flex-col items-center gap-4">
           <ArcadeText color="pink" glow className="text-xl">

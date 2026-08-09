@@ -180,7 +180,11 @@ const MainMenu = () => {
             <ArcadeButton className="menu-btn w-full" color="yellow" onClick={() => { setTempName(''); setBoothModeFlow('name'); }}>
               CLASSIC 1V1 (BOOTH)
             </ArcadeButton>
-            <ArcadeButton className="menu-btn w-full" color="cyan" onClick={() => navigate('/create')}>
+            <ArcadeButton className="menu-btn w-full" color="cyan" onClick={() => {
+              useMatchStore.getState().setGameMode('race');
+              if (!useUserStore.getState().playerName) setShowNameModal(true);
+              else navigate('/create');
+            }}>
               CREATE MATCH
             </ArcadeButton>
             <ArcadeButton className="menu-btn w-full" color="pink" onClick={() => navigate('/join')}>
