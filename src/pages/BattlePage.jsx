@@ -696,11 +696,33 @@ const BattlePage = () => {
       </div>
 
       {/* Badges UI - Bottom Left */}
-      <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 z-20 flex gap-4 pointer-events-none">
-        {[1, 2, 3].map((badge) => (
-          <div key={badge} className="w-10 h-10 md:w-14 md:h-14 border-2 border-[var(--color-neon-cyan)] bg-black flex items-center justify-center"
-            style={{ boxShadow: '0 0 8px rgba(0,243,255,0.3), inset 0 0 8px rgba(0,243,255,0.05)' }}>
-            <div className="w-2 h-2 md:w-3 md:h-3 bg-[var(--color-neon-cyan-muted)]"></div>
+      <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 z-20 flex items-center gap-3 md:gap-4 pointer-events-none">
+        {[
+          { id: 1, label: gameMode === 'classic_booth' ? 'PT 1' : 'WIN', icon: '👑', active: localPoints >= 1, color: '#fffb00' },
+          { id: 2, label: gameMode === 'classic_booth' ? 'PT 2' : 'SPEED', icon: '⚡', active: gameMode === 'classic_booth' ? localPoints >= 2 : wpm >= 50, color: '#00f3ff' },
+          { id: 3, label: gameMode === 'classic_booth' ? 'PT 3' : 'ACC', icon: '🎯', active: gameMode === 'classic_booth' ? localPoints >= 3 : (accuracy >= 95 && statsRef.current?.totalKeystrokes >= 20), color: '#39ff14' },
+        ].map((b) => (
+          <div key={b.id} className="flex flex-col items-center gap-1">
+            <div 
+              className={`w-10 h-10 md:w-14 md:h-14 border-2 bg-black flex items-center justify-center transition-all duration-300 ${
+                b.active 
+                  ? 'border-white scale-105' 
+                  : 'border-[var(--color-neon-cyan)]/40 opacity-40'
+              }`}
+              style={{
+                borderColor: b.active ? b.color : 'rgba(0,243,255,0.3)',
+                boxShadow: b.active ? `0 0 15px ${b.color}, inset 0 0 10px ${b.color}40` : '0 0 8px rgba(0,243,255,0.1)',
+              }}
+            >
+              <span className={`text-lg md:text-2xl transition-all ${b.active ? 'scale-110 animate-pulse' : 'grayscale opacity-50'}`}
+                style={{ filter: b.active ? `drop-shadow(0 0 8px ${b.color})` : 'none' }}>
+                {b.icon}
+              </span>
+            </div>
+            <span className="font-[family-name:var(--font-arcade)] text-[9px] md:text-[11px] tracking-widest uppercase"
+              style={{ color: b.active ? b.color : 'rgba(255,255,255,0.3)' }}>
+              {b.label}
+            </span>
           </div>
         ))}
       </div>
@@ -713,42 +735,32 @@ const BattlePage = () => {
         </div>
       </div>
 
-      {/* Realtime Battle Debugger Panel */}
-      <div className="fixed bottom-3 left-3 z-[999] bg-black/90 border border-green-500/50 p-2.5 rounded-sm font-mono text-[10px] text-green-400 select-none backdrop-blur-md shadow-[0_0_15px_rgba(57,255,20,0.15)] flex flex-col gap-1 max-w-[280px]">
-        <div className="flex items-center justify-between border-b border-green-500/30 pb-1 mb-1 font-bold tracking-widest text-[11px]">
-          <span>⚡ REALTIME DEBUGGER</span>
-          <span className={channelState === 'SUBSCRIBED' ? 'text-green-400 animate-pulse' : 'text-yellow-400'}>
-            ● {channelState || 'DISCONNECTED'}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">ROUND:</span>
-          <span className="text-yellow-400 font-bold">R#{roundNumber || 1}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">LOCAL READY:</span>
-          <span className={localReady ? 'text-green-400 font-bold' : 'text-red-400'}>
-            {localReady ? '✓ READY' : '✗ NOT READY'}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">OPPONENT READY:</span>
-          <span className={opponentReady ? 'text-green-400 font-bold' : 'text-red-400'}>
-            {opponentReady ? '✓ READY' : '✗ NOT READY'}
-          </span>
-        </div>
-        <div className="flex flex-col gap-0.5 mt-1 pt-1 border-t border-green-500/20 text-[9px]">
-          <span className="text-gray-400">PRESENCE SLOTS ({players.length}/2):</span>
-          {players.map((p, idx) => (
-            <div key={p.id || idx} className="flex justify-between">
-              <span className="truncate max-w-[120px]">{p.playerName || 'PLAYER'}{p.isHost ? ' (HOST)' : ''}:</span>
-              <span className="text-cyan-400 font-mono">
-                R#{p.readyRound || 0} {p.readyRound === roundNumber ? '✓' : '⌛'}
-              </span>
-            </div>
-          ))}
+      {/* Integrated Arcade Ready Status HUD (Game Component Debugger) */}
+      <div className="fixed top-4 right-4 z-[90] pointer-events-none flex flex-col items-end gap-1 font-[family-name:var(--font-arcade)] select-none">
+        <div className="border-2 border-[var(--color-neon-cyan)] bg-black/90 px-4 py-2 flex flex-col gap-1.5 min-w-[200px]"
+          style={{ boxShadow: '0 0 15px rgba(0,243,255,0.3), inset 0 0 15px rgba(0,243,255,0.05)' }}>
+          
+          <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1 text-[11px] tracking-widest text-[var(--color-neon-cyan)]">
+            <span>SYNC MONITOR</span>
+            <span className="text-yellow-400">R#{roundNumber || 1}</span>
+          </div>
+
+          <div className="flex items-center justify-between text-xs tracking-wider">
+            <span className="text-white/70">YOU:</span>
+            <span className={localReady ? "text-[var(--color-neon-green)] font-bold drop-shadow-[0_0_5px_rgba(57,255,20,0.8)]" : "text-[var(--color-neon-pink)] font-bold animate-pulse"}>
+              {localReady ? "[ READY ]" : "[ NOT READY ]"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-xs tracking-wider">
+            <span className="text-white/70">OPPONENT:</span>
+            <span className={opponentReady ? "text-[var(--color-neon-green)] font-bold drop-shadow-[0_0_5px_rgba(57,255,20,0.8)]" : "text-[var(--color-neon-pink)] font-bold animate-pulse"}>
+              {opponentReady ? "[ READY ]" : "[ NOT READY ]"}
+            </span>
+          </div>
         </div>
       </div>
+
 
       <style>{`
         @keyframes scan { 0% { transform: translateX(-100%) } 100% { transform: translateX(350%) } }
