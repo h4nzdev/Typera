@@ -57,9 +57,8 @@ const BattlePage = () => {
   const [localDamage, setLocalDamage] = useState(0);
   const [isMatchActive, setIsMatchActive] = useState(false);
   
-  const [battlePhase, setBattlePhase] = useState('waiting'); // waiting, countdown, playing, round_over
+  const [battlePhase, setBattlePhase] = useState('waiting'); // waiting, countdown, playing
   const [countdown, setCountdown] = useState(null);
-  const [roundWinnerName, setRoundWinnerName] = useState('');
 
   const statsRef = useRef({ totalKeystrokes: 0, errors: 0, wordErrors: 0 });
   const maxComboRef = useRef(0);
@@ -105,37 +104,16 @@ const BattlePage = () => {
   useEffect(() => {
     if (gameMode !== 'classic_booth') return;
     
+    // When a point is scored (via broadcast), navigate to the result screen
     if (localPoints > prevLocalPoints.current || opponentPoints > prevOpponentPoints.current) {
        const isLocalWin = localPoints > prevLocalPoints.current;
        prevLocalPoints.current = localPoints;
        prevOpponentPoints.current = opponentPoints;
        
-       if (localPoints >= 3) {
-         endGame(true, false, false);
-       } else if (opponentPoints >= 3) {
-         endGame(false, false, false);
-       } else {
-         setBattlePhase('round_over');
-         setIsMatchActive(false);
-         setRoundWinnerName(isLocalWin ? 'YOU' : 'OPPONENT');
-         playSound('start'); // winning round sound
-         
-         setTimeout(() => {
-            setTyped('');
-            setCombo(0);
-            setWpm(0);
-            setAccuracy(100);
-            setLocalDamage(0);
-            statsRef.current = { totalKeystrokes: 0, errors: 0, wordErrors: 0 };
-            
-            if (isHost) {
-               useMatchStore.getState().resetRound();
-            }
-            setBattlePhase('waiting');
-         }, 4000);
-       }
+       // Both players go to the result screen to see the score
+       endGame(isLocalWin, false, false);
     }
-  }, [localPoints, opponentPoints, gameMode, endGame, isHost]);
+  }, [localPoints, opponentPoints, gameMode, endGame]);
 
   // Block the back button during the entire battle sequence
   useEffect(() => {
@@ -378,9 +356,8 @@ const BattlePage = () => {
       }
       
       if (gameMode === 'classic_booth' && next === challengeText) {
-         // I am the winner of the round!
+         // I am the winner of the round! Broadcast it. The useEffect will catch it and call endGame.
          useMatchStore.getState().recordRoundWinner(myId);
-         setBattlePhase('round_over');
          setIsMatchActive(false);
       }
       
@@ -413,19 +390,8 @@ const BattlePage = () => {
                 if (isWinner && !isDraw) {
                   useMatchStore.getState().recordRoundWinner(myId);
                 } else if (isDraw) {
-                  // No points for draw, just reset round
-                  setBattlePhase('round_over');
-                  setRoundWinnerName('NOBODY (DRAW)');
-                  setTimeout(() => {
-                    setTyped('');
-                    setCombo(0);
-                    setWpm(0);
-                    setAccuracy(100);
-                    setLocalDamage(0);
-                    statsRef.current = { totalKeystrokes: 0, errors: 0, wordErrors: 0 };
-                    if (isHost) useMatchStore.getState().resetRound();
-                    setBattlePhase('waiting');
-                  }, 4000);
+                  // No points for draw, go to result screen anyway
+                  endGame(false, false, true);
                 }
                 return 0;
               }
@@ -555,31 +521,7 @@ const BattlePage = () => {
         </div>
       )}
 
-      {/* Round Over Overlay (Booth Mode) */}
-      {battlePhase === 'round_over' && !isPaused && (
-        <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center pointer-events-none backdrop-blur-md">
-          <ArcadeText as="h1" color="yellow" glow className="text-6xl md:text-8xl mb-4 text-center animate-bounce">
-            ROUND OVER!
-          </ArcadeText>
-          <ArcadeText color="white" className="text-2xl md:text-4xl tracking-widest text-center mt-4">
-            {roundWinnerName} WON THIS ROUND
-          </ArcadeText>
-          <div className="flex gap-12 mt-12 items-center">
-             <div className="flex flex-col items-center gap-2">
-                <ArcadeText color="cyan" className="text-xl">YOU</ArcadeText>
-                <ArcadeText color="cyan" glow className="text-6xl">{localPoints}</ArcadeText>
-             </div>
-             <ArcadeText color="white" className="text-4xl opacity-50">-</ArcadeText>
-             <div className="flex flex-col items-center gap-2">
-                <ArcadeText color="pink" className="text-xl">OPPONENT</ArcadeText>
-                <ArcadeText color="pink" glow className="text-6xl">{opponentPoints}</ArcadeText>
-             </div>
-          </div>
-          <ArcadeText color="yellow" className="text-lg tracking-widest mt-12 animate-pulse opacity-80">
-            NEXT ROUND STARTING SOON...
-          </ArcadeText>
-        </div>
-      )}
+
 
       <div className="w-full mx-auto flex flex-col z-10 h-full flex-grow justify-between max-w-[1800px]">
         {/* Top Section */}

@@ -27,6 +27,7 @@ const MatchResultPage = () => {
     maxCombo: 42
   };
   const { isWinner, wpm, accuracy, maxCombo, isDraw, myPoints, opponentPoints } = matchData;
+  const isMatchOver = matchData.mode === 'classic_booth' ? (myPoints >= 3 || opponentPoints >= 3) : true;
 
   useEffect(() => {
     if (status === 'cancelled' && matchData.mode !== 'solo') {
@@ -117,7 +118,7 @@ const MatchResultPage = () => {
   const hasAutoSaved = useRef(false);
 
   useEffect(() => {
-    if (matchData.mode === 'classic_booth' && !hasAutoSaved.current) {
+    if (matchData.mode === 'classic_booth' && isMatchOver && !hasAutoSaved.current) {
        hasAutoSaved.current = true;
        
        if (isWinner && !isDraw && (wpm > 0 || accuracy > 0)) {
@@ -139,33 +140,35 @@ const MatchResultPage = () => {
        
        return () => clearTimeout(timer);
     }
-  }, [matchData.mode, isWinner, isDraw, wpm, accuracy, channel, leaveMatch, navigate]);
+  }, [matchData.mode, isMatchOver, isWinner, isDraw, wpm, accuracy, channel, leaveMatch, navigate]);
 
   return (
     <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center bg-black/90 relative overflow-hidden">
       {/* Mock Particles */}
-      {isWinner && !isDraw && (
+      {isWinner && !isDraw && isMatchOver && (
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50 pointer-events-none"></div>
       )}
 
       <div className="z-10 flex flex-col items-center text-center gap-8">
         <div className="result-title flex flex-col items-center gap-4">
           <ArcadeText as="h1" color={matchData.mode === 'solo' ? 'cyan' : (isDraw ? 'yellow' : (isWinner ? 'cyan' : 'red'))} glow className="result-title-text text-6xl md:text-8xl">
-            {matchData.mode === 'solo' ? 'COMPLETE!' : (isDraw ? 'DRAW!' : (isWinner ? 'VICTORY!' : 'DEFEAT!'))}
+            {!isMatchOver ? (isWinner ? 'ROUND WON!' : (isDraw ? 'ROUND DRAW!' : 'ROUND LOST!')) : (matchData.mode === 'solo' ? 'COMPLETE!' : (isDraw ? 'DRAW!' : (isWinner ? 'VICTORY!' : 'DEFEAT!')))}
           </ArcadeText>
           <ArcadeText color="white" className="result-subtitle text-2xl tracking-widest flex flex-col items-center gap-2">
             <span>
-              {matchData.mode === 'solo' 
+              {!isMatchOver 
+                ? `ROUND ${myPoints + opponentPoints || 1} OVER`
+                : (matchData.mode === 'solo' 
                 ? 'PRACTICE SESSION FINISHED' 
-                : (isDraw ? "IT'S A TIE!" : (isWinner ? (matchData.surrendered ? 'OPPONENT SURRENDERED' : (submitted ? 'SCORE SAVED TO LEADERBOARD' : `${playerName || 'PLAYER'} WINS`)) : 'YOU LOSE!'))}
+                : (isDraw ? "IT'S A TIE!" : (isWinner ? (matchData.surrendered ? 'OPPONENT SURRENDERED' : (submitted ? 'SCORE SAVED TO LEADERBOARD' : `${playerName || 'PLAYER'} WINS`)) : 'YOU LOSE!')))}
             </span>
             {matchData.mode === 'classic_booth' && (
               <span className="text-yellow-400 text-3xl mt-2 font-bold filter drop-shadow-[0_0_8px_rgba(255,251,0,0.8)]">
-                SCORE: {isWinner ? `3 - ${opponentPoints || 0}` : `${myPoints || 0} - 3`}
+                SCORE: {myPoints || 0} - {opponentPoints || 0}
               </span>
             )}
           </ArcadeText>
-          {matchData.mode === 'classic_booth' && (
+          {matchData.mode === 'classic_booth' && isMatchOver && (
              <ArcadeText color="yellow" className="text-sm tracking-widest mt-2 animate-pulse">
                RETURNING TO LOBBY SHORTLY...
              </ArcadeText>
@@ -195,6 +198,30 @@ const MatchResultPage = () => {
           )}
 
           <div className="result-btns flex flex-wrap justify-center gap-4 md:gap-6 mt-4">
+            {matchData.mode === 'classic_booth' && !isMatchOver && (
+              <>
+                <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
+                  useMatchStore.getState().resetRound();
+                  navigate('/battle');
+                }} disabled={isSaving}>
+                  NEXT ROUND
+                </ArcadeButton>
+                <ArcadeButton color="pink" className="whitespace-nowrap" onClick={() => {
+                  if (channel) {
+                    channel.send({
+                      type: 'broadcast',
+                      event: 'match_status',
+                      payload: { status: 'cancelled' }
+                    });
+                  }
+                  leaveMatch();
+                  navigate('/');
+                }} disabled={isSaving}>
+                  SURRENDER
+                </ArcadeButton>
+              </>
+            )}
+
             {matchData.mode !== 'classic_booth' && (
               <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
                 if (matchData.mode === 'solo') {
