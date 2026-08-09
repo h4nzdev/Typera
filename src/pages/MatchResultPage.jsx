@@ -26,7 +26,7 @@ const MatchResultPage = () => {
     accuracy: 98,
     maxCombo: 42
   };
-  const { isWinner, wpm, accuracy, maxCombo, isDraw } = matchData;
+  const { isWinner, wpm, accuracy, maxCombo, isDraw, myPoints, opponentPoints } = matchData;
 
   useEffect(() => {
     if (status === 'cancelled' && matchData.mode !== 'solo') {
@@ -153,10 +153,17 @@ const MatchResultPage = () => {
           <ArcadeText as="h1" color={matchData.mode === 'solo' ? 'cyan' : (isDraw ? 'yellow' : (isWinner ? 'cyan' : 'red'))} glow className="result-title-text text-6xl md:text-8xl">
             {matchData.mode === 'solo' ? 'COMPLETE!' : (isDraw ? 'DRAW!' : (isWinner ? 'VICTORY!' : 'DEFEAT!'))}
           </ArcadeText>
-          <ArcadeText color="white" className="result-subtitle text-2xl tracking-widest">
-            {matchData.mode === 'solo' 
-              ? 'PRACTICE SESSION FINISHED' 
-              : (isDraw ? "IT'S A TIE!" : (isWinner ? (matchData.surrendered ? 'OPPONENT SURRENDERED' : (submitted ? 'SCORE SAVED TO LEADERBOARD' : `${playerName || 'PLAYER'} WINS`)) : 'YOU LOSE!'))}
+          <ArcadeText color="white" className="result-subtitle text-2xl tracking-widest flex flex-col items-center gap-2">
+            <span>
+              {matchData.mode === 'solo' 
+                ? 'PRACTICE SESSION FINISHED' 
+                : (isDraw ? "IT'S A TIE!" : (isWinner ? (matchData.surrendered ? 'OPPONENT SURRENDERED' : (submitted ? 'SCORE SAVED TO LEADERBOARD' : `${playerName || 'PLAYER'} WINS`)) : 'YOU LOSE!'))}
+            </span>
+            {matchData.mode === 'classic_booth' && (
+              <span className="text-yellow-400 text-3xl mt-2 font-bold filter drop-shadow-[0_0_8px_rgba(255,251,0,0.8)]">
+                SCORE: {isWinner ? `3 - ${opponentPoints || 0}` : `${myPoints || 0} - 3`}
+              </span>
+            )}
           </ArcadeText>
           {matchData.mode === 'classic_booth' && (
              <ArcadeText color="yellow" className="text-sm tracking-widest mt-2 animate-pulse">

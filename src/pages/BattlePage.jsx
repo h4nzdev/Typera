@@ -84,10 +84,12 @@ const BattlePage = () => {
         wpm,
         accuracy: finalAccuracy,
         maxCombo: maxComboRef.current,
-        mode: 'battle'
+        mode: gameMode,
+        myPoints: localPoints,
+        opponentPoints
       }
     });
-  }, [navigate, wpm, accuracy]);
+  }, [navigate, wpm, accuracy, gameMode, localPoints, opponentPoints]);
 
   // Handle Ready Handshake
   useEffect(() => {
