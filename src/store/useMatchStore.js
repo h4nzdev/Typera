@@ -43,6 +43,7 @@ const useMatchStore = create((set, get) => ({
   players: [],
   status: 'lobby', // lobby | starting | playing | finished
   channel: null,
+  channelState: 'DISCONNECTED',
   opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
   localReady: false,
   opponentReady: false,
@@ -135,11 +136,21 @@ const useMatchStore = create((set, get) => ({
   },
 
   setLocalReady: async () => {
+    const { channel, isHost, roundNumber, myId } = get();
     set({ localReady: true });
-    const { channel, isHost, roundNumber } = get();
+    
     if (channel) {
       const { playerName } = (await import('../store/useUserStore')).default.getState();
+      
+      // 1. Presence update (for late arrivers)
       await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: roundNumber });
+      
+      // 2. Immediate Broadcast fallback (for instant zero-latency delivery to opponent)
+      channel.send({
+        type: 'broadcast',
+        event: 'player_ready',
+        payload: { id: myId, readyRound: roundNumber }
+      });
     }
   },
 
@@ -173,7 +184,8 @@ const useMatchStore = create((set, get) => ({
       matchCode: code, 
       isHost, 
       myId, 
-      channel: newChannel, 
+      channel: newChannel,
+      channelState: 'CONNECTING', 
       status: 'lobby', 
       players: [], 
       opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
@@ -234,8 +246,7 @@ const useMatchStore = create((set, get) => ({
            }
         }
 
-        // ── Strict Round-Based Ready Handshake ────────────────────────────
-        // A player is ONLY ready if their presence's readyRound matches the store's current round.
+        // ── Presence Sync Handshake Check ────────────────────────────
         if (connectedPlayers.length === 2) {
           const myId = get().myId;
           const currentRound = get().roundNumber || 1;
@@ -245,20 +256,31 @@ const useMatchStore = create((set, get) => ({
           const isMeReady = me?.readyRound === currentRound;
           const isOppReady = opponent?.readyRound === currentRound;
 
-          set({ 
-            localReady: isMeReady, 
-            opponentReady: isOppReady 
-          });
+          set((state) => ({ 
+            localReady: state.localReady || isMeReady, 
+            opponentReady: state.opponentReady || isOppReady 
+          }));
+        }
+      })
+      .on('broadcast', { event: 'player_ready' }, (payload) => {
+        const myId = get().myId;
+        const currentRound = get().roundNumber || 1;
+        // Immediate broadcast handler for ready status
+        if (payload.payload.id !== myId && payload.payload.readyRound === currentRound) {
+          set({ opponentReady: true });
         }
       })
       .on('broadcast', { event: 'match_setup' }, (payload) => {
-        set(state => ({ 
+        const nextRound = payload.payload.roundNumber || get().roundNumber || 1;
+        const roundChanged = nextRound !== get().roundNumber;
+        
+        set((state) => ({ 
           challengeWords: payload.payload.challengeWords, 
           category: payload.payload.category || 'all',
           gameMode: payload.payload.gameMode || 'race',
-          roundNumber: payload.payload.roundNumber || state.roundNumber || 1,
-          localReady: false,
-          opponentReady: false,
+          roundNumber: nextRound,
+          localReady: roundChanged ? false : state.localReady,
+          opponentReady: roundChanged ? false : state.opponentReady,
         }));
       })
       .on('broadcast', { event: 'match_append_words' }, (payload) => {
@@ -293,6 +315,7 @@ const useMatchStore = create((set, get) => ({
         set({ status: payload.payload.status });
       })
       .subscribe(async (status) => {
+        set({ channelState: status });
         if (status === 'SUBSCRIBED') {
           const { playerName } = (await import('../store/useUserStore')).default.getState();
           await newChannel.track({ isHost, joinedAt: Date.now(), playerName: playerName || 'PLAYER', readyRound: 0 });
@@ -305,7 +328,7 @@ const useMatchStore = create((set, get) => ({
     if (channel) {
       await channel.unsubscribe();
     }
-    set({ matchCode: null, channel: null, players: [], status: 'lobby', challengeWords: [], roundNumber: 1, _throttledBroadcast: null });
+    set({ matchCode: null, channel: null, channelState: 'DISCONNECTED', players: [], status: 'lobby', challengeWords: [], roundNumber: 1, _throttledBroadcast: null });
   },
 
   resetRound: () => {

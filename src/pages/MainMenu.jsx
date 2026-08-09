@@ -115,7 +115,7 @@ const MainMenu = () => {
   const active = MENU_ITEMS[selectedIdx];
 
   return (
-    <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center overflow-hidden relative select-none" style={{ background: 'radial-gradient(ellipse at center, #0a0015 0%, #05050A 70%)' }}>
+    <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center overflow-hidden relative select-none" style={{ background: 'radial-gradient(ellipse at center, rgba(10,0,21,0.4) 0%, rgba(5,5,10,0.72) 100%)' }}>
 
       {/* Scanlines overlay */}
       <div className="pointer-events-none absolute inset-0 z-50" style={{

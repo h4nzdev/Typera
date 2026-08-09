@@ -36,7 +36,9 @@ const BattlePage = () => {
     localPoints,
     opponentPoints,
     myId,
-    players
+    players,
+    channelState,
+    roundNumber
   } = useMatchStore();
   
   const hostPlayer = players.find(p => p.isHost);
@@ -464,7 +466,7 @@ const BattlePage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col overflow-hidden p-4 md:p-8 relative" style={{ background: 'radial-gradient(ellipse at center, #0a0015 0%, #05050A 70%)' }}>
+    <div className="min-h-screen flex flex-col overflow-hidden p-4 md:p-8 relative" style={{ background: 'radial-gradient(ellipse at center, rgba(10,0,21,0.4) 0%, rgba(5,5,10,0.72) 100%)' }}>
       {/* Scanlines */}
       <div className="pointer-events-none absolute inset-0 z-50" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)' }} />
       {/* Neon pixel grid */}
@@ -625,9 +627,24 @@ const BattlePage = () => {
           {/* Main Typing Section */}
           <div className={`w-full flex flex-col items-center relative transition-transform ${shake ? 'animate-shake' : ''}`}>
             {activeDebuff?.type === 'glitch' && (
-              <div className="absolute inset-0 z-50 pointer-events-none mix-blend-difference bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50 animate-pulse"></div>
+              <>
+                {/* ── LITERAL ARCADE GLITCH OVERLAY ── */}
+                {/* 1. Full-screen Chromatic CRT static noise */}
+                <div className="absolute -inset-4 z-50 pointer-events-none mix-blend-difference bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-80 animate-glitch-flicker" />
+
+                {/* 2. Moving Horizontal Glitch Slice Bar */}
+                <div className="absolute inset-x-0 top-1/4 h-12 bg-cyan-500/20 z-50 pointer-events-none mix-blend-color-dodge animate-glitch-slice border-y border-[var(--color-neon-cyan)] flex items-center justify-center">
+                  <span className="font-[family-name:var(--font-arcade)] text-xs text-[var(--color-neon-yellow)] tracking-[0.4em] bg-black/80 px-4 py-0.5 border border-yellow-400 animate-pulse">
+                    ⚠ SYSTEM ERROR // KEYBOARD CORRUPTED ⚠
+                  </span>
+                </div>
+
+                {/* 3. Second offset slice bar */}
+                <div className="absolute inset-x-0 bottom-1/3 h-8 bg-pink-500/20 z-50 pointer-events-none mix-blend-hard-light animate-glitch-slice border-y border-[var(--color-neon-pink)]" />
+              </>
             )}
-            <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-md opacity-30' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-pulse translate-x-1 -translate-y-1 skew-x-2' : ''}`}>
+
+            <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-md opacity-30' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-cyber-glitch scale-[1.02]' : ''}`}>
               <TypingText text={challengeText} words={challengeWords} typed={typed} />
             </div>
           </div>
@@ -653,7 +670,7 @@ const BattlePage = () => {
             chars={`${typed.length}/${challengeText.length}`} 
             combo={`×${combo}`} 
           />
-          <VirtualKeyboard pressedKey={pressedKey} />
+          <VirtualKeyboard pressedKey={pressedKey} isGlitched={activeDebuff?.type === 'glitch'} />
         </div>
       </div>
 
@@ -672,6 +689,43 @@ const BattlePage = () => {
         <div className="w-12 h-12 md:w-16 md:h-16 border-2 border-[var(--color-neon-yellow)] bg-black flex flex-col items-center justify-center"
           style={{ boxShadow: '0 0 15px rgba(255,251,0,0.3), inset 0 0 10px rgba(255,251,0,0.1)' }}>
           <span className="text-xl md:text-3xl filter drop-shadow-[0_0_5px_rgba(255,251,0,0.8)]">🏆</span>
+        </div>
+      </div>
+
+      {/* Realtime Battle Debugger Panel */}
+      <div className="fixed bottom-3 left-3 z-[999] bg-black/90 border border-green-500/50 p-2.5 rounded-sm font-mono text-[10px] text-green-400 select-none backdrop-blur-md shadow-[0_0_15px_rgba(57,255,20,0.15)] flex flex-col gap-1 max-w-[280px]">
+        <div className="flex items-center justify-between border-b border-green-500/30 pb-1 mb-1 font-bold tracking-widest text-[11px]">
+          <span>⚡ REALTIME DEBUGGER</span>
+          <span className={channelState === 'SUBSCRIBED' ? 'text-green-400 animate-pulse' : 'text-yellow-400'}>
+            ● {channelState || 'DISCONNECTED'}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-400">ROUND:</span>
+          <span className="text-yellow-400 font-bold">R#{roundNumber || 1}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-400">LOCAL READY:</span>
+          <span className={localReady ? 'text-green-400 font-bold' : 'text-red-400'}>
+            {localReady ? '✓ READY' : '✗ NOT READY'}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-400">OPPONENT READY:</span>
+          <span className={opponentReady ? 'text-green-400 font-bold' : 'text-red-400'}>
+            {opponentReady ? '✓ READY' : '✗ NOT READY'}
+          </span>
+        </div>
+        <div className="flex flex-col gap-0.5 mt-1 pt-1 border-t border-green-500/20 text-[9px]">
+          <span className="text-gray-400">PRESENCE SLOTS ({players.length}/2):</span>
+          {players.map((p, idx) => (
+            <div key={p.id || idx} className="flex justify-between">
+              <span className="truncate max-w-[120px]">{p.playerName || 'PLAYER'}{p.isHost ? ' (HOST)' : ''}:</span>
+              <span className="text-cyan-400 font-mono">
+                R#{p.readyRound || 0} {p.readyRound === roundNumber ? '✓' : '⌛'}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 

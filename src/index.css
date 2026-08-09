@@ -88,4 +88,68 @@
   .animate-shake {
     animation: shake 0.3s ease-in-out;
   }
+
+  /* ── Cyberpunk Glitch UI Keyframes & Styles ── */
+  @keyframes cyberGlitch {
+    0% {
+      transform: translate(0, 0) skew(0deg);
+      filter: drop-shadow(-4px 0 #ff007f) drop-shadow(4px 0 #00f3ff);
+    }
+    15% {
+      transform: translate(-7px, 4px) skew(5deg);
+      filter: drop-shadow(5px -3px #fffb00) drop-shadow(-5px 3px #ff003c);
+    }
+    30% {
+      transform: translate(6px, -5px) skew(-7deg);
+      filter: drop-shadow(-6px 3px #39ff14) drop-shadow(6px -3px #b026ff);
+    }
+    45% {
+      transform: translate(-4px, 6px) skew(4deg);
+      filter: drop-shadow(4px 4px #ff007f) drop-shadow(-4px -4px #00f3ff);
+    }
+    60% {
+      transform: translate(7px, -3px) skew(-5deg);
+      filter: drop-shadow(-5px -3px #fffb00) drop-shadow(5px 3px #ff003c);
+    }
+    75% {
+      transform: translate(-5px, -4px) skew(6deg);
+      filter: drop-shadow(3px -5px #00f3ff) drop-shadow(-3px 5px #ff007f);
+    }
+    90% {
+      transform: translate(4px, 5px) skew(-3deg);
+      filter: drop-shadow(-4px 0 #39ff14) drop-shadow(4px 0 #b026ff);
+    }
+    100% {
+      transform: translate(0, 0) skew(0deg);
+      filter: drop-shadow(-4px 0 #ff007f) drop-shadow(4px 0 #00f3ff);
+    }
+  }
+
+  @keyframes glitchSlice {
+    0%   { clip-path: inset(10% 0 80% 0); transform: translateX(-15px); }
+    20%  { clip-path: inset(60% 0 10% 0); transform: translateX(15px); }
+    40%  { clip-path: inset(30% 0 50% 0); transform: translateX(-10px); }
+    60%  { clip-path: inset(80% 0 5% 0);  transform: translateX(12px); }
+    80%  { clip-path: inset(40% 0 40% 0); transform: translateX(-8px); }
+    100% { clip-path: inset(15% 0 70% 0); transform: translateX(0px); }
+  }
+
+  @keyframes glitchFlicker {
+    0%, 100% { opacity: 1; filter: invert(0%); }
+    25% { opacity: 0.4; filter: invert(100%); }
+    50% { opacity: 0.9; filter: hue-rotate(180deg); }
+    75% { opacity: 0.3; filter: invert(50%); }
+  }
+
+  .animate-cyber-glitch {
+    animation: cyberGlitch 0.12s infinite linear alternate-reverse;
+  }
+
+  .animate-glitch-slice {
+    animation: glitchSlice 0.2s infinite steps(2, jump-none);
+  }
+
+  .animate-glitch-flicker {
+    animation: glitchFlicker 0.15s infinite steps(1);
+  }
 }

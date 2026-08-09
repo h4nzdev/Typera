@@ -21,7 +21,7 @@ const VirtualKey = ({ char, state = 'normal', className = '' }) => {
   );
 };
 
-const VirtualKeyboard = ({ pressedKey = null }) => {
+const VirtualKeyboard = ({ pressedKey = null, isGlitched = false }) => {
   const row1 = "QWERTYUIOP".split('');
   const row2 = "ASDFGHJKL".split('');
   const row3 = "ZXCVBNM".split('');
@@ -32,7 +32,7 @@ const VirtualKeyboard = ({ pressedKey = null }) => {
   };
 
   return (
-    <div className="flex flex-col gap-3 md:gap-4 items-center mt-2 w-full max-w-5xl">
+    <div className={`flex flex-col gap-3 md:gap-4 items-center mt-2 w-full max-w-5xl transition-all ${isGlitched ? 'animate-cyber-glitch' : ''}`}>
       <div className="flex gap-2 md:gap-3">
         {row1.map(char => <VirtualKey key={char} char={char} state={getKeyState(char)} className="w-12 h-12 md:w-16 md:h-16" />)}
       </div>

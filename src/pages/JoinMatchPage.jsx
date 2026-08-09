@@ -46,7 +46,7 @@ const JoinMatchPage = () => {
 
   return (
     <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
-      style={{ background: 'radial-gradient(ellipse at center, #0a0015 0%, #05050A 70%)' }}>
+      style={{ background: 'radial-gradient(ellipse at center, rgba(10,0,21,0.4) 0%, rgba(5,5,10,0.72) 100%)' }}>
       {/* Scanlines */}
       <div className="pointer-events-none absolute inset-0 z-50" style={{
         backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)',
