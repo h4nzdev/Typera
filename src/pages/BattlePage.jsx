@@ -12,7 +12,7 @@ import PowerUpSlot from '../components/battle/PowerUpSlot';
 import DebuffBanner from '../components/battle/DebuffBanner';
 import { useNavigate } from 'react-router-dom';
 import useMatchStore from '../store/useMatchStore';
-import { playSound, playVoice } from '../lib/sounds';
+import { playSound, playVoice, playBgm } from '../lib/sounds';
 
 const MATCH_DURATION = 60; // 60 seconds match
 
@@ -73,6 +73,10 @@ const BattlePage = () => {
   const MAX_HP = 1000;
   const myHp = Math.max(0, MAX_HP - (opponentStats.damageDealt || 0));
   const opponentHp = Math.max(0, MAX_HP - localDamage);
+
+  useEffect(() => {
+    playBgm('battle');
+  }, []);
 
   // Helper to transition to results
   const endGame = useCallback((isWinner, isSurrender = false, isDraw = false) => {
@@ -199,13 +203,18 @@ const BattlePage = () => {
     }
   }, [status, battlePhase, endGame]);
 
-  // Handle Steal Debuff
+  // Handle Steal Debuff (Target loses 15 characters / 2-3 words of typed progress)
   useEffect(() => {
     if (activeDebuff?.type === 'steal' && battlePhase === 'playing') {
       playSound('error');
       triggerShake();
       setTyped(prev => {
-        const next = prev.slice(0, Math.max(0, prev.length - 3));
+        let cutIndex = Math.max(0, prev.length - 15);
+        const lastSpace = prev.lastIndexOf(' ', cutIndex);
+        if (lastSpace > 0 && lastSpace > prev.length - 25) {
+          cutIndex = lastSpace;
+        }
+        const next = prev.slice(0, cutIndex);
         let correctCount = 0;
         for (let i = 0; i < next.length; i++) {
           if (next[i] === challengeText[i]) correctCount++;
@@ -229,10 +238,10 @@ const BattlePage = () => {
       if (heldPowerUp === 'steal') {
          setTyped(prev => {
            let next = prev;
-           for (let i = 0; i < 3; i++) {
-             if (next.length < challengeText.length) {
-               next += challengeText[next.length];
-             }
+           let added = 0;
+           while (next.length < challengeText.length && added < 15) {
+             next += challengeText[next.length];
+             added++;
            }
            const newProgress = Math.min(100, Math.round((next.length / challengeText.length) * 100)) || 0;
            broadcastStats({ progress: newProgress, wpm, accuracy, combo });
@@ -639,16 +648,18 @@ const BattlePage = () => {
               </>
             )}
 
-            {/* ── LITERAL BLIND OVERLAY (TOTAL PITCH-BLACK BLACKOUT) ── */}
+            {/* ── LITERAL BLIND OVERLAY (FULL SCREEN WHITEOUT + EYE ICON) ── */}
             {activeDebuff?.type === 'blind' && (
-              <div className="absolute inset-0 z-50 pointer-events-none bg-black/98 rounded-xl border-4 border-[var(--color-neon-purple)] flex flex-col items-center justify-center gap-3 backdrop-blur-3xl animate-blind-blackout p-6 shadow-[0_0_60px_rgba(176,38,255,0.8)]">
-                <span className="text-6xl animate-pulse filter drop-shadow-[0_0_15px_#b026ff]">👁</span>
-                <span className="font-[family-name:var(--font-arcade)] text-2xl text-[var(--color-neon-purple)] tracking-[0.3em] text-center text-glow-purple animate-pulse">
-                  VISUAL SENSORS OFFLINE
-                </span>
-                <span className="font-[family-name:var(--font-arcade)] text-xs text-white/50 tracking-widest uppercase">
-                  [ BLIND DEBUFF ACTIVE // BLINDED FOR 3 SECONDS ]
-                </span>
+              <div className="fixed inset-0 z-[99999] bg-white flex flex-col items-center justify-center pointer-events-none select-none animate-pulse p-6">
+                <div className="flex flex-col items-center gap-6 animate-bounce">
+                  <span className="text-[120px] filter drop-shadow-[0_0_50px_rgba(0,0,0,0.9)]">👁</span>
+                  <span className="font-[family-name:var(--font-arcade)] text-5xl md:text-7xl text-black font-black tracking-[0.5em] text-center uppercase">
+                    BLINDED!
+                  </span>
+                  <span className="font-[family-name:var(--font-arcade)] text-sm md:text-base text-black tracking-widest uppercase bg-yellow-400 border-4 border-black px-6 py-2 font-bold shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+                    ⚠ VISUAL SENSORS OFFLINE // FULL WHITEOUT ⚠
+                  </span>
+                </div>
               </div>
             )}
 

@@ -7,7 +7,7 @@ import ArcadeButton from '../components/arcade/ArcadeButton';
 import useUserStore from '../store/useUserStore';
 import useMatchStore from '../store/useMatchStore';
 import { Settings } from 'lucide-react';
-import { playSound } from '../lib/sounds';
+import { playSound, playBgm } from '../lib/sounds';
 
 // Pixel corner piece SVG for arcade border
 const PixelCorner = ({ className = '' }) => (
@@ -48,6 +48,10 @@ const MainMenu = () => {
   useEffect(() => {
     const t = setInterval(() => setBlink(b => !b), 530);
     return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    playBgm('menu');
   }, []);
 
   // Keyboard navigation

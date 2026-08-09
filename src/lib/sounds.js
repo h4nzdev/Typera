@@ -1,4 +1,4 @@
-// Native Web Audio API Synthesizer for Retro Arcade Sounds
+// Native Web Audio API Synthesizer for Retro Arcade Sounds & Background Music
 let audioCtx;
 
 const initAudio = () => {
@@ -39,9 +39,6 @@ const playSynth = (type, freq1, freq2, duration, vol = 0.1) => {
 };
 
 // ─── Voice / MP3 asset pool ──────────────────────────────────────────────────
-// Pre-load each audio asset once and reuse the same element.
-// Using a Map so we can look up by name and reset playback on each call.
-
 const voiceAssets = {
   'you-win':  new Audio(new URL('../assets/voice/you-win.mp3',  import.meta.url).href),
   'you-lose': new Audio(new URL('../assets/voice/you-lose.mp3', import.meta.url).href),
@@ -50,22 +47,89 @@ const voiceAssets = {
   'blind':    new Audio(new URL('../assets/voice/blind.mp3',    import.meta.url).href),
 };
 
-// Set volume for voice lines
 Object.values(voiceAssets).forEach(a => { a.volume = 0.9; });
 
-/**
- * Play a voice/MP3 asset by name.
- * Resets the element to the start if it was already playing.
- */
 export const playVoice = (name) => {
   try {
     const audio = voiceAssets[name];
     if (!audio) return;
     audio.currentTime = 0;
-    audio.play().catch(() => {}); // ignore autoplay policy errors silently
+    audio.play().catch(() => {});
   } catch (err) {
     // Non-fatal
   }
+};
+
+// ─── Background Music (BGM) System ──────────────────────────────────────────
+let currentBgm = null;
+let currentType = null;
+let bgmVolume = 0.35;
+let isMuted = false;
+
+const bgmAssets = {
+  menu:   new Audio(new URL('../assets/music/bg-music2.mp3', import.meta.url).href),
+  battle: new Audio(new URL('../assets/music/bg-music.mp3',  import.meta.url).href),
+};
+
+Object.values(bgmAssets).forEach(a => {
+  a.loop = true;
+  a.volume = bgmVolume;
+});
+
+export const playBgm = (type) => {
+  try {
+    if (isMuted) return;
+    if (currentType === type && currentBgm && !currentBgm.paused) return;
+
+    const target = bgmAssets[type];
+    if (!target) return;
+
+    if (currentBgm && currentBgm !== target) {
+      currentBgm.pause();
+      currentBgm.currentTime = 0;
+    }
+
+    currentBgm = target;
+    currentType = type;
+    currentBgm.volume = bgmVolume;
+
+    const promise = currentBgm.play();
+    if (promise !== undefined) {
+      promise.catch(() => {
+        // Autoplay blocked by browser policy — attach interaction listener
+        const handleInteraction = () => {
+          if (currentBgm && !isMuted) {
+            currentBgm.play().catch(() => {});
+          }
+          window.removeEventListener('click', handleInteraction);
+          window.removeEventListener('keydown', handleInteraction);
+        };
+        window.addEventListener('click', handleInteraction);
+        window.addEventListener('keydown', handleInteraction);
+      });
+    }
+  } catch (err) {
+    // Non-fatal
+  }
+};
+
+export const stopBgm = () => {
+  if (currentBgm) {
+    currentBgm.pause();
+    currentBgm.currentTime = 0;
+    currentBgm = null;
+    currentType = null;
+  }
+};
+
+export const toggleMuteBgm = () => {
+  isMuted = !isMuted;
+  if (isMuted && currentBgm) {
+    currentBgm.pause();
+  } else if (!isMuted && currentBgm) {
+    currentBgm.play().catch(() => {});
+  }
+  return isMuted;
 };
 
 export const playSound = (soundName) => {
@@ -74,28 +138,22 @@ export const playSound = (soundName) => {
     
     switch (soundName) {
       case 'keyPress':
-        // Short mechanical typewriter tick
         playSynth('triangle', 800, 600, 0.05, 0.05);
         break;
       case 'error':
-        // Low harsh buzz
         playSynth('sawtooth', 150, 100, 0.3, 0.15);
         break;
       case 'combo':
-        // Bright victory chime
         playSynth('sine', 1200, null, 0.3, 0.1);
         setTimeout(() => playSynth('sine', 1600, null, 0.4, 0.1), 100);
         break;
       case 'start':
-        // Upward sweeping laser sound
         playSynth('square', 400, 1200, 0.5, 0.08);
         break;
       case 'hover':
-        // Very soft blip
         playSynth('sine', 800, null, 0.03, 0.02);
         break;
       case 'click':
-        // Solid confirm blip
         playSynth('square', 600, 300, 0.1, 0.05);
         break;
       default:
