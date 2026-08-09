@@ -79,8 +79,6 @@ const BattlePage = () => {
     // If the player didn't type a single key, accuracy should be 0, not the default 100.
     const finalAccuracy = statsRef.current.totalKeystrokes === 0 ? 0 : accuracy;
     
-    console.log('[BATTLE] endGame called | gameMode:', gameMode, '| isWinner:', isWinner, '| localPoints:', localPoints, '| opponentPoints:', opponentPoints);
-    
     navigate('/result', {
       state: {
         isWinner,

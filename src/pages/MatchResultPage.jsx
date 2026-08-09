@@ -273,12 +273,6 @@ const MatchResultPage = () => {
           </div>
         </div>
       </div>
-      {/* DEBUG OVERLAY */}
-      <div className="absolute bottom-0 right-0 bg-black text-green-500 text-[10px] font-mono p-2 z-[9999] opacity-50 text-right">
-        DEBUG RESULT:<br/>
-        mode: {matchData.mode}<br/>
-        myPts: {matchData.myPoints} | oppPts: {matchData.opponentPoints}
-      </div>
     </div>
   );
 };

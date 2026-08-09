@@ -6,40 +6,77 @@ import ArcadeButton from '../components/arcade/ArcadeButton';
 import useUserStore from '../store/useUserStore';
 import useMatchStore from '../store/useMatchStore';
 import { Settings } from 'lucide-react';
+import { playSound } from '../lib/sounds';
+
+// Pixel corner piece SVG for arcade border
+const PixelCorner = ({ className = '' }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" className={className} style={{ imageRendering: 'pixelated' }}>
+    <rect x="0" y="0" width="8" height="8" fill="currentColor" />
+    <rect x="8" y="0" width="8" height="8" fill="currentColor" />
+    <rect x="16" y="0" width="8" height="8" fill="currentColor" />
+    <rect x="0" y="8" width="8" height="8" fill="currentColor" />
+    <rect x="0" y="16" width="8" height="8" fill="currentColor" />
+  </svg>
+);
+
+const MENU_ITEMS = [
+  { id: 'booth',    label: 'CLASSIC 1V1',   sub: 'BOOTH MODE',       color: '#fffb00',  glow: 'rgba(255,251,0,0.6)',   key: 'yellow' },
+  { id: 'create',   label: 'CREATE MATCH',  sub: 'ONLINE BATTLE',    color: '#00f3ff',  glow: 'rgba(0,243,255,0.6)',   key: 'cyan'   },
+  { id: 'join',     label: 'JOIN MATCH',    sub: 'ENTER CODE',       color: '#ff007f',  glow: 'rgba(255,0,127,0.6)',   key: 'pink'   },
+  { id: 'practice', label: 'SOLO PRACTICE', sub: 'TRAIN YOUR SPEED', color: '#39ff14',  glow: 'rgba(57,255,20,0.6)',   key: 'green'  },
+  { id: 'board',    label: 'LEADERBOARD',   sub: 'HALL OF FAME',     color: '#b026ff',  glow: 'rgba(176,38,255,0.6)',  key: 'purple' },
+];
 
 const MainMenu = () => {
   const navigate = useNavigate();
   const containerRef = useRef(null);
-  
+  const selRef = useRef(null);
+
   const { playerName, setPlayerName } = useUserStore();
   const [showNameModal, setShowNameModal] = useState(false);
   const [tempName, setTempName] = useState('');
-  
-  const [boothModeFlow, setBoothModeFlow] = useState(null); // null, 'name', 'action'
-  const { setGameMode } = useMatchStore();
-  
-  // Show modal on first load if no name is set
+  const [boothModeFlow, setBoothModeFlow] = useState(null);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [blink, setBlink] = useState(true);
+
   useEffect(() => {
-    if (!playerName) {
-      setShowNameModal(true);
-    }
+    if (!playerName) setShowNameModal(true);
   }, [playerName]);
 
-  useLayoutEffect(() => {
-    if (showNameModal || boothModeFlow) return; // Don't run main animations if modal is active
+  // Blinking cursor
+  useEffect(() => {
+    const t = setInterval(() => setBlink(b => !b), 530);
+    return () => clearInterval(t);
+  }, []);
 
+  // Keyboard navigation
+  useEffect(() => {
+    if (showNameModal || boothModeFlow) return;
+    const handler = (e) => {
+      if (e.key === 'ArrowUp') {
+        playSound('hover');
+        setSelectedIdx(i => (i - 1 + MENU_ITEMS.length) % MENU_ITEMS.length);
+      } else if (e.key === 'ArrowDown') {
+        playSound('hover');
+        setSelectedIdx(i => (i + 1) % MENU_ITEMS.length);
+      } else if (e.key === 'Enter') {
+        handleMenuAction(MENU_ITEMS[selectedIdx].id);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showNameModal, boothModeFlow, selectedIdx]);
+
+  useLayoutEffect(() => {
+    if (showNameModal || boothModeFlow) return;
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline();
-      
-      tl.fromTo(".logo", { y: -50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }, 0)
-        .fromTo(".subtitle", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0.2)
-        .fromTo(".desc", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0.3)
-        .fromTo(".menu-btn", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: "power2.out" }, 0.4);
-        
+      gsap.fromTo('.mm-logo', { y: -60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' });
+      gsap.fromTo('.mm-panel', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.5)', delay: 0.3 });
+      gsap.fromTo('.mm-item', { x: -30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, stagger: 0.08, ease: 'power2.out', delay: 0.4 });
+      gsap.fromTo('.mm-coin', { y: -10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, delay: 1, ease: 'bounce.out' });
     }, containerRef);
-    
     return () => ctx.revert();
-  }, [showNameModal]);
+  }, [showNameModal, boothModeFlow]);
 
   const handleSaveName = () => {
     if (tempName.trim().length > 0) {
@@ -56,148 +93,223 @@ const MainMenu = () => {
   };
 
   const handleBoothAction = (action) => {
-    setGameMode('classic_booth');
+    useMatchStore.getState().setGameMode('classic_booth');
     setBoothModeFlow(null);
     navigate(action === 'create' ? '/create' : '/join');
   };
 
+  const handleMenuAction = (id) => {
+    playSound('click');
+    if (id === 'booth') { setTempName(''); setBoothModeFlow('name'); }
+    else if (id === 'create') {
+      useMatchStore.getState().setGameMode('race');
+      if (!playerName) setShowNameModal(true);
+      else navigate('/create');
+    }
+    else if (id === 'join') navigate('/join');
+    else if (id === 'practice') navigate('/practice');
+    else if (id === 'board') navigate('/leaderboard');
+  };
+
+  const active = MENU_ITEMS[selectedIdx];
+
   return (
-    <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center bg-black/50 overflow-hidden relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,243,255,0.05)_0%,transparent_60%)] pointer-events-none"></div>
-      
-      {/* Name Entry Modal (Normal) */}
+    <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center overflow-hidden relative select-none" style={{ background: 'radial-gradient(ellipse at center, #0a0015 0%, #05050A 70%)' }}>
+
+      {/* Scanlines overlay */}
+      <div className="pointer-events-none absolute inset-0 z-50" style={{
+        backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px)',
+      }} />
+
+      {/* Animated grid floor */}
+      <div className="pointer-events-none absolute inset-0" style={{
+        backgroundImage: `linear-gradient(rgba(0,243,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,243,255,0.04) 1px, transparent 1px)`,
+        backgroundSize: '48px 48px',
+        maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)'
+      }} />
+
+      {/* Player ID badge — top left */}
+      {!showNameModal && !boothModeFlow && (
+        <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
+          <div className="border border-[var(--color-neon-cyan)] px-3 py-1 text-xs font-[family-name:var(--font-arcade)] tracking-widest"
+            style={{ boxShadow: '0 0 8px rgba(0,243,255,0.3), inset 0 0 8px rgba(0,243,255,0.05)' }}>
+            <span className="text-white/40">PLAYER </span>
+            <span className="text-[var(--color-neon-cyan)]">{playerName || '???'}</span>
+          </div>
+          <button onClick={() => { setTempName(playerName); setShowNameModal(true); }}
+            className="text-white/20 hover:text-[var(--color-neon-cyan)] transition-colors" title="Change Name">
+            <Settings size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* INSERT COIN marquee — top right */}
+      {!showNameModal && !boothModeFlow && (
+        <div className="mm-coin absolute top-6 right-6 z-20 font-[family-name:var(--font-arcade)] text-xs tracking-widest"
+          style={{ color: blink ? '#fffb00' : 'transparent', textShadow: blink ? '0 0 12px rgba(255,251,0,0.8)' : 'none', transition: 'color 0.05s, text-shadow 0.05s' }}>
+          ► INSERT COIN ◄
+        </div>
+      )}
+
+      {/* ── Name Entry Modal (Normal) ── */}
       {showNameModal && !boothModeFlow && (
-        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-4">
-          <ArcadeText color="cyan" glow className="text-4xl md:text-5xl mb-8 text-center leading-tight">
-            {!playerName ? 'WELCOME TO THE ARENA' : 'UPDATE YOUR ID'}
-          </ArcadeText>
-          <div className="flex flex-col gap-6 items-center w-full max-w-md">
-            <ArcadeText color="pink" className="text-sm tracking-widest text-center">
-              ENTER YOUR 5-LETTER INITIALS
-            </ArcadeText>
-            <input 
-              type="text" 
-              maxLength={5}
-              value={tempName}
+        <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-md p-4">
+          <div className="relative border-2 border-[var(--color-neon-cyan)] p-10 flex flex-col items-center gap-6 max-w-sm w-full"
+            style={{ boxShadow: '0 0 30px rgba(0,243,255,0.3), inset 0 0 30px rgba(0,243,255,0.05)' }}>
+            {/* Pixel corners */}
+            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-[var(--color-neon-cyan)]" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-[var(--color-neon-cyan)]" />
+            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-[var(--color-neon-cyan)]" />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-[var(--color-neon-cyan)]" />
+            <ArcadeText color="cyan" glow className="text-3xl text-center">ENTER YOUR NAME</ArcadeText>
+            <ArcadeText color="pink" className="text-xs tracking-widest text-center">UP TO 5 CHARACTERS</ArcadeText>
+            <input type="text" maxLength={5} value={tempName}
               onChange={(e) => setTempName(e.target.value.toUpperCase())}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); }}
-              className="bg-black/80 border-2 border-[var(--color-neon-cyan)] rounded text-[var(--color-neon-cyan)] px-4 py-3 text-4xl font-[inherit] uppercase text-center outline-none focus:shadow-[0_0_20px_var(--color-neon-cyan)] transition-shadow w-48"
-              placeholder="AAAAA"
-              autoFocus
-            />
-            <ArcadeButton color="cyan" className="w-48 py-3 mt-4" onClick={handleSaveName} disabled={!tempName.trim()}>
-              CONFIRM
-            </ArcadeButton>
-            {playerName && (
-              <ArcadeButton color="white" className="text-xs py-2 w-48" onClick={() => setShowNameModal(false)}>
-                CANCEL
-              </ArcadeButton>
-            )}
+              className="bg-black border-b-2 border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] px-4 py-2 text-4xl font-[family-name:var(--font-arcade)] uppercase text-center outline-none w-48"
+              placeholder="AAAAA" autoFocus />
+            <ArcadeButton color="cyan" className="w-full" onClick={handleSaveName} disabled={!tempName.trim()}>CONFIRM</ArcadeButton>
+            {playerName && <ArcadeButton color="white" className="text-xs py-1 w-full" onClick={() => setShowNameModal(false)}>CANCEL</ArcadeButton>}
           </div>
         </div>
       )}
 
-      {/* Booth Mode Modals */}
+      {/* ── Booth Name Modal ── */}
       {boothModeFlow === 'name' && (
-        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-4">
-          <ArcadeText color="yellow" glow className="text-4xl md:text-5xl mb-8 text-center leading-tight">
-            BOOTH MODE
-          </ArcadeText>
-          <div className="flex flex-col gap-6 items-center w-full max-w-md">
-            <ArcadeText color="white" className="text-sm tracking-widest text-center">
-              ENTER YOUR NAME FOR THIS MATCH
-            </ArcadeText>
-            <input 
-              type="text" 
-              maxLength={5}
-              value={tempName}
+        <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-md p-4">
+          <div className="relative border-2 border-[var(--color-neon-yellow)] p-10 flex flex-col items-center gap-6 max-w-sm w-full"
+            style={{ boxShadow: '0 0 30px rgba(255,251,0,0.3), inset 0 0 30px rgba(255,251,0,0.05)' }}>
+            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-[var(--color-neon-yellow)]" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-[var(--color-neon-yellow)]" />
+            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-[var(--color-neon-yellow)]" />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-[var(--color-neon-yellow)]" />
+            <ArcadeText color="yellow" glow className="text-3xl text-center">BOOTH MODE</ArcadeText>
+            <ArcadeText color="white" className="text-xs tracking-widest text-center">ENTER YOUR NAME FOR THIS MATCH</ArcadeText>
+            <input type="text" maxLength={5} value={tempName}
               onChange={(e) => setTempName(e.target.value.toUpperCase())}
               onKeyDown={(e) => { if (e.key === 'Enter') handleBoothNameSubmit(); }}
-              className="bg-black/80 border-2 border-[var(--color-neon-yellow)] rounded text-[var(--color-neon-yellow)] px-4 py-3 text-4xl font-[inherit] uppercase text-center outline-none focus:shadow-[0_0_20px_rgba(255,251,0,0.8)] transition-shadow w-48"
-              placeholder="AAAAA"
-              autoFocus
-            />
-            <ArcadeButton color="yellow" className="w-48 py-3 mt-4" onClick={handleBoothNameSubmit} disabled={!tempName.trim()}>
-              NEXT
-            </ArcadeButton>
-            <ArcadeButton color="white" className="text-xs py-2 w-48" onClick={() => setBoothModeFlow(null)}>
-              CANCEL
-            </ArcadeButton>
+              className="bg-black border-b-2 border-[var(--color-neon-yellow)] text-[var(--color-neon-yellow)] px-4 py-2 text-4xl font-[family-name:var(--font-arcade)] uppercase text-center outline-none w-48"
+              placeholder="AAAAA" autoFocus />
+            <ArcadeButton color="yellow" className="w-full" onClick={handleBoothNameSubmit} disabled={!tempName.trim()}>NEXT</ArcadeButton>
+            <ArcadeButton color="white" className="text-xs py-1 w-full" onClick={() => setBoothModeFlow(null)}>CANCEL</ArcadeButton>
           </div>
         </div>
       )}
 
+      {/* ── Booth Action Modal ── */}
       {boothModeFlow === 'action' && (
-        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-4">
-          <ArcadeText color="yellow" glow className="text-4xl md:text-5xl mb-8 text-center leading-tight">
-            BOOTH MATCH
-          </ArcadeText>
-          <div className="flex flex-col gap-6 items-center w-full max-w-md">
-            <ArcadeButton color="cyan" className="w-64 py-4" onClick={() => handleBoothAction('create')}>
-              CREATE MATCH
-            </ArcadeButton>
-            <ArcadeButton color="pink" className="w-64 py-4" onClick={() => handleBoothAction('join')}>
-              JOIN MATCH
-            </ArcadeButton>
-            <ArcadeButton color="white" className="text-xs py-2 w-64 mt-4" onClick={() => setBoothModeFlow(null)}>
-              CANCEL
-            </ArcadeButton>
-          </div>
-        </div>
-      )}
-
-      {/* Main UI */}
-      {!showNameModal && !boothModeFlow && (
-        <>
-          <div className="absolute top-8 left-8 flex items-center gap-4 z-20">
-            <ArcadeText color="white" className="text-sm tracking-widest opacity-50">
-              ID: <span className="text-[var(--color-neon-cyan)] opacity-100">{playerName}</span>
-            </ArcadeText>
-            <button 
-              onClick={() => { setTempName(playerName); setShowNameModal(true); }}
-              className="text-white/30 hover:text-[var(--color-neon-cyan)] transition-colors"
-              title="Change Name"
-            >
-              <Settings size={16} />
-            </button>
-          </div>
-
-          <div className="text-center mb-12 z-10">
-            <ArcadeText as="h1" color="cyan" glow className="logo text-6xl md:text-8xl mb-4 block">
-              TYPE//BATTLE
-            </ArcadeText>
-            <ArcadeText as="h2" color="pink" className="subtitle text-2xl md:text-3xl mb-8 block">
-              1V1 TYPING ARENA
-            </ArcadeText>
-            <div className="desc font-[family-name:var(--font-arcade)] text-gray-400 text-lg md:text-xl tracking-widest leading-relaxed">
-              <p>TYPE FAST.</p>
-              <p>STAY ACCURATE.</p>
-              <p>BUILD YOUR COMBO.</p>
+        <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-md p-4">
+          <div className="relative border-2 border-[var(--color-neon-yellow)] p-10 flex flex-col items-center gap-6 max-w-sm w-full"
+            style={{ boxShadow: '0 0 30px rgba(255,251,0,0.3), inset 0 0 30px rgba(255,251,0,0.05)' }}>
+            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-[var(--color-neon-yellow)]" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-[var(--color-neon-yellow)]" />
+            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-[var(--color-neon-yellow)]" />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-[var(--color-neon-yellow)]" />
+            <ArcadeText color="yellow" glow className="text-3xl text-center">BOOTH MATCH</ArcadeText>
+            <ArcadeText color="white" className="text-xs tracking-widest opacity-60">FIRST TO 3 WINS</ArcadeText>
+            <div className="flex flex-col gap-4 w-full">
+              <ArcadeButton color="cyan" className="w-full" onClick={() => handleBoothAction('create')}>CREATE MATCH</ArcadeButton>
+              <ArcadeButton color="pink" className="w-full" onClick={() => handleBoothAction('join')}>JOIN MATCH</ArcadeButton>
+              <ArcadeButton color="white" className="text-xs py-1 w-full" onClick={() => setBoothModeFlow(null)}>CANCEL</ArcadeButton>
             </div>
           </div>
-          
-          <div className="flex flex-col gap-6 z-10 w-72">
-            <ArcadeButton className="menu-btn w-full" color="yellow" onClick={() => { setTempName(''); setBoothModeFlow('name'); }}>
-              CLASSIC 1V1 (BOOTH)
-            </ArcadeButton>
-            <ArcadeButton className="menu-btn w-full" color="cyan" onClick={() => {
-              useMatchStore.getState().setGameMode('race');
-              if (!useUserStore.getState().playerName) setShowNameModal(true);
-              else navigate('/create');
-            }}>
-              CREATE MATCH
-            </ArcadeButton>
-            <ArcadeButton className="menu-btn w-full" color="pink" onClick={() => navigate('/join')}>
-              JOIN MATCH
-            </ArcadeButton>
-            <ArcadeButton className="menu-btn w-full" color="green" onClick={() => navigate('/practice')}>
-              SOLO PRACTICE
-            </ArcadeButton>
-            <ArcadeButton className="menu-btn w-full" color="purple" onClick={() => navigate('/leaderboard')}>
-              LEADERBOARD
-            </ArcadeButton>
+        </div>
+      )}
+
+      {/* ── MAIN MENU ── */}
+      {!showNameModal && !boothModeFlow && (
+        <div className="z-10 flex flex-col items-center gap-8 w-full max-w-lg px-4">
+
+          {/* Logo */}
+          <div className="mm-logo text-center">
+            <h1 className="font-[family-name:var(--font-arcade)] text-5xl md:text-7xl tracking-widest leading-none"
+              style={{ color: '#00f3ff', textShadow: '0 0 10px #00f3ff, 0 0 30px #00f3ff, 0 0 60px rgba(0,243,255,0.5)' }}>
+              TYPE<span style={{ color: '#ff007f', textShadow: '0 0 10px #ff007f, 0 0 30px #ff007f' }}>//</span>BATTLE
+            </h1>
+            <p className="font-[family-name:var(--font-arcade)] text-lg tracking-[0.4em] mt-2"
+              style={{ color: '#b026ff', textShadow: '0 0 8px #b026ff' }}>
+              1V1 TYPING ARENA
+            </p>
           </div>
-        </>
+
+          {/* Pixel-border arcade menu panel */}
+          <div className="mm-panel w-full relative">
+            {/* Outer pixel border */}
+            <div className="relative border-4 p-1" style={{
+              borderColor: active.color,
+              boxShadow: `0 0 0 2px #000, 0 0 20px ${active.glow}, 0 0 60px ${active.glow.replace('0.6', '0.15')}, inset 0 0 20px rgba(0,0,0,0.8)`,
+              transition: 'border-color 0.2s, box-shadow 0.2s',
+              imageRendering: 'pixelated',
+            }}>
+              {/* Pixel corner accents */}
+              <div className="absolute -top-2 -left-2 w-5 h-5" style={{ background: active.color, boxShadow: `0 0 8px ${active.color}` }} />
+              <div className="absolute -top-2 -right-2 w-5 h-5" style={{ background: active.color, boxShadow: `0 0 8px ${active.color}` }} />
+              <div className="absolute -bottom-2 -left-2 w-5 h-5" style={{ background: active.color, boxShadow: `0 0 8px ${active.color}` }} />
+              <div className="absolute -bottom-2 -right-2 w-5 h-5" style={{ background: active.color, boxShadow: `0 0 8px ${active.color}` }} />
+
+              {/* Inner border */}
+              <div className="border-2 border-black/60 bg-black/80 p-2">
+
+                {/* Header bar */}
+                <div className="flex items-center justify-between px-3 py-1 mb-2 border-b-2" style={{ borderColor: active.color, background: `${active.color}15` }}>
+                  <span className="font-[family-name:var(--font-arcade)] text-xs tracking-widest" style={{ color: active.color }}>SELECT MODE</span>
+                  <span className="font-[family-name:var(--font-arcade)] text-xs tracking-widest" style={{ color: active.color }}>↑↓ NAVIGATE · ENTER SELECT</span>
+                </div>
+
+                {/* Menu items */}
+                <div className="flex flex-col gap-0">
+                  {MENU_ITEMS.map((item, i) => {
+                    const isSel = i === selectedIdx;
+                    return (
+                      <button
+                        key={item.id}
+                        className="mm-item w-full text-left px-4 py-3 font-[family-name:var(--font-arcade)] tracking-widest transition-all duration-100 relative group flex items-center gap-4"
+                        style={{
+                          background: isSel ? `${item.color}18` : 'transparent',
+                          borderLeft: isSel ? `4px solid ${item.color}` : '4px solid transparent',
+                          outline: 'none',
+                        }}
+                        onClick={() => handleMenuAction(item.id)}
+                        onMouseEnter={() => { setSelectedIdx(i); playSound('hover'); }}
+                      >
+                        {/* Selection cursor */}
+                        <span className="text-base shrink-0 transition-all duration-100"
+                          style={{ color: item.color, opacity: isSel ? (blink ? 1 : 0.3) : 0, textShadow: `0 0 8px ${item.color}`, transition: 'opacity 0.05s' }}>
+                          ►
+                        </span>
+                        <div className="flex-1">
+                          <div className="text-lg leading-none" style={{ color: isSel ? item.color : '#888', textShadow: isSel ? `0 0 8px ${item.color}` : 'none', transition: 'color 0.15s' }}>
+                            {item.label}
+                          </div>
+                          {isSel && (
+                            <div className="text-xs mt-0.5 opacity-60" style={{ color: item.color, letterSpacing: '0.15em' }}>
+                              {item.sub}
+                            </div>
+                          )}
+                        </div>
+                        {isSel && (
+                          <span className="text-xs shrink-0" style={{ color: item.color, opacity: 0.6 }}>ENTER</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Footer bar */}
+                <div className="mt-2 pt-2 border-t-2 flex justify-between px-3" style={{ borderColor: `${active.color}40` }}>
+                  <span className="font-[family-name:var(--font-arcade)] text-xs opacity-30 tracking-widest" style={{ color: active.color }}>© TYPE//BATTLE</span>
+                  <span className="font-[family-name:var(--font-arcade)] text-xs opacity-30 tracking-widest" style={{ color: active.color }}>v1.0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Press START text */}
+          <div className="font-[family-name:var(--font-arcade)] text-sm tracking-[0.3em]"
+            style={{ color: blink ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)', transition: 'color 0.1s' }}>
+            PRESS ENTER OR CLICK TO SELECT
+          </div>
+        </div>
       )}
     </div>
   );

@@ -5,9 +5,13 @@ const ArcadeButton = ({ children, onClick, color = 'cyan', className = '', type 
   const baseClasses = `relative px-6 py-3 font-[family-name:var(--font-arcade)] text-xl tracking-widest uppercase transition-all duration-200 border-2 active:scale-95 cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed active:scale-100' : ''}`;
   
   const colorClasses = {
-    cyan: "text-white border-[var(--color-neon-cyan)] hover:bg-[var(--color-neon-cyan-muted)] border-glow-cyan text-glow-cyan",
-    pink: "text-white border-[var(--color-neon-pink)] hover:bg-[var(--color-neon-pink-muted)] border-glow-pink text-glow-pink",
+    cyan:   "text-white border-[var(--color-neon-cyan)]   hover:bg-[var(--color-neon-cyan-muted)]   border-glow-cyan   text-glow-cyan",
+    pink:   "text-white border-[var(--color-neon-pink)]   hover:bg-[var(--color-neon-pink-muted)]   border-glow-pink   text-glow-pink",
     purple: "text-white border-[var(--color-neon-purple)] hover:bg-[var(--color-neon-purple-muted)] shadow-[0_0_5px_rgba(176,38,255,0.2),inset_0_0_5px_rgba(176,38,255,0.2)] text-glow-purple",
+    green:  "text-white border-[var(--color-neon-green)]  hover:bg-[var(--color-neon-green-muted)]  shadow-[0_0_5px_rgba(57,255,20,0.2),inset_0_0_5px_rgba(57,255,20,0.2)]   text-glow-green",
+    yellow: "text-white border-[var(--color-neon-yellow)] hover:bg-[rgba(255,251,0,0.1)] shadow-[0_0_5px_rgba(255,251,0,0.2),inset_0_0_5px_rgba(255,251,0,0.2)] [text-shadow:0_0_5px_var(--color-neon-yellow),0_0_10px_var(--color-neon-yellow)]",
+    white:  "text-white border-white/40 hover:bg-white/10",
+    red:    "text-white border-[var(--color-neon-red)] hover:bg-[var(--color-neon-red-muted)] shadow-[0_0_5px_rgba(255,0,60,0.2),inset_0_0_5px_rgba(255,0,60,0.2)] text-glow-red",
   };
 
   const handleClick = (e) => {
