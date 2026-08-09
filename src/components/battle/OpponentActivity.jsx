@@ -142,41 +142,16 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
       {activeCfg && debuff && (
         <div
           ref={bannerRef}
-          className="absolute inset-x-0 top-0 z-40 origin-top"
+          className="absolute inset-x-0 top-1 z-40 origin-top flex justify-center pointer-events-none"
           style={{ transformOrigin: 'top center' }}
         >
-          {/* Outer banner border */}
-          <div
-            className="relative border-b-4 px-2 py-1.5 flex flex-col items-center justify-center bg-black/95"
-            style={{
-              borderColor: activeCfg.color,
-              boxShadow: `0 4px 20px ${activeCfg.glow}, inset 0 0 20px ${activeCfg.color}10`,
-            }}
-          >
-            {/* Top accent line */}
-            <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: activeCfg.color, boxShadow: `0 0 8px ${activeCfg.color}` }} />
-
-            {/* Corner accents on the banner itself */}
-            <div className="absolute top-1 left-1 w-2 h-2 border-t-2 border-l-2" style={{ borderColor: activeCfg.color }} />
-            <div className="absolute top-1 right-1 w-2 h-2 border-t-2 border-r-2" style={{ borderColor: activeCfg.color }} />
-
-            {/* Banner PNG Image */}
-            <img
-              src={activeCfg.image}
-              alt={activeCfg.label}
-              className="max-h-16 xl:max-h-20 w-auto object-contain select-none pointer-events-none"
-              style={{ filter: `drop-shadow(0 0 8px ${activeCfg.color})` }}
-              draggable={false}
-            />
-
-            {/* Scanning bottom bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden">
-              <div
-                className="h-full w-1/3 animate-[scan_0.8s_linear_infinite]"
-                style={{ background: activeCfg.color }}
-              />
-            </div>
-          </div>
+          <img
+            src={activeCfg.image}
+            alt={activeCfg.label}
+            className="max-h-16 xl:max-h-20 w-auto object-contain select-none pointer-events-none"
+            style={{ filter: `drop-shadow(0 0 10px ${activeCfg.color}) drop-shadow(0 0 20px ${activeCfg.glow})` }}
+            draggable={false}
+          />
         </div>
       )}
 

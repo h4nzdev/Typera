@@ -9,26 +9,20 @@ import blindBanner from '../../assets/banner/blind-banner.png';
 const DEBUFF_CONFIG = {
   steal: {
     label: 'STOLEN!',
-    sub: 'YOUR PROGRESS WAS STOLEN',
     color: '#ff003c',
     glow: 'rgba(255,0,60,0.85)',
-    icon: '⚡',
     image: stealBanner,
   },
   blind: {
     label: 'BLINDED!',
-    sub: 'YOU CANNOT SEE THE TEXT',
     color: '#b026ff',
     glow: 'rgba(176,38,255,0.85)',
-    icon: '👁',
     image: blindBanner,
   },
   glitch: {
     label: 'GLITCHED!',
-    sub: 'KEYBOARD IS SCRAMBLED',
     color: '#fffb00',
     glow: 'rgba(255,251,0,0.85)',
-    icon: '⚠',
     image: glitchBanner,
   },
 };
@@ -67,21 +61,21 @@ const DebuffBanner = ({ activeDebuff }) => {
       // Animate IN: slide down + scale up + fade in
       gsap.fromTo(
         el,
-        { yPercent: -120, opacity: 0, scaleX: 0.8 },
+        { yPercent: -140, opacity: 0, scale: 0.8 },
         {
           yPercent: 0,
           opacity: 1,
-          scaleX: 1,
-          duration: 0.4,
-          ease: 'back.out(1.8)',
+          scale: 1,
+          duration: 0.35,
+          ease: 'back.out(1.7)',
           onComplete: () => {
             // After 2 seconds visible, animate OUT
             hideTimerRef.current = setTimeout(() => {
               gsap.to(el, {
-                yPercent: -130,
+                yPercent: -140,
                 opacity: 0,
-                scaleX: 0.85,
-                duration: 0.45,
+                scale: 0.8,
+                duration: 0.35,
                 ease: 'power3.in',
                 onComplete: () => {
                   setMounted(false);
@@ -102,63 +96,23 @@ const DebuffBanner = ({ activeDebuff }) => {
   if (!mounted || !cfg) return null;
 
   return (
-    // Outer wrapper: fixed center position, overflow hidden to clip slide-in
+    // Outer wrapper: fixed top-center position
     <div
-      className="absolute top-2 left-1/2 z-[200] pointer-events-none overflow-visible"
+      className="absolute top-10 left-1/2 z-[200] pointer-events-none overflow-visible"
       style={{ transform: 'translateX(-50%)' }}
     >
-      {/* Animated panel — GSAP targets this */}
+      {/* Animated panel containing JUST the banner PNG (no outer border box) */}
       <div ref={panelRef} style={{ willChange: 'transform, opacity' }}>
-        {/* Pixel border outer frame */}
-        <div
-          className="relative border-4 p-[3px] mt-2 flex flex-col items-center justify-center bg-black/90"
+        <img
+          src={cfg.image}
+          alt={cfg.label}
+          className="max-h-28 md:max-h-36 w-auto object-contain select-none pointer-events-none"
           style={{
-            borderColor: cfg.color,
-            boxShadow: `0 0 0 2px #000, 0 0 35px ${cfg.glow}, 0 0 80px ${cfg.glow.replace('0.85', '0.3')}`,
+            filter: `drop-shadow(0 0 15px ${cfg.color}) drop-shadow(0 0 35px ${cfg.glow})`,
           }}
-        >
-          {/* Corner pixel squares */}
-          {['-top-2 -left-2', '-top-2 -right-2', '-bottom-2 -left-2', '-bottom-2 -right-2'].map((pos, i) => (
-            <div
-              key={i}
-              className={`absolute ${pos} w-4 h-4`}
-              style={{ background: cfg.color, boxShadow: `0 0 8px ${cfg.color}` }}
-            />
-          ))}
-
-          {/* Banner Graphic Image */}
-          <div className="relative overflow-hidden p-2 flex items-center justify-center">
-            <img
-              src={cfg.image}
-              alt={cfg.label}
-              className="max-h-24 md:max-h-28 w-auto object-contain select-none pointer-events-none"
-              style={{
-                filter: `drop-shadow(0 0 12px ${cfg.color}) drop-shadow(0 0 25px ${cfg.glow})`,
-              }}
-              draggable={false}
-            />
-          </div>
-
-          {/* Bottom scan line */}
-          <div className="absolute bottom-0 left-0 right-0 h-[3px] overflow-hidden">
-            <div
-              className="h-full w-1/3"
-              style={{
-                background: cfg.color,
-                boxShadow: `0 0 10px ${cfg.color}`,
-                animation: 'bannerScan 0.9s linear infinite',
-              }}
-            />
-          </div>
-        </div>
+          draggable={false}
+        />
       </div>
-
-      <style>{`
-        @keyframes bannerScan {
-          0%   { transform: translateX(-100%) }
-          100% { transform: translateX(400%) }
-        }
-      `}</style>
     </div>
   );
 };
