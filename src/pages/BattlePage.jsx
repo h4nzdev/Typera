@@ -12,7 +12,7 @@ import PowerUpSlot from '../components/battle/PowerUpSlot';
 import DebuffBanner from '../components/battle/DebuffBanner';
 import { useNavigate } from 'react-router-dom';
 import useMatchStore from '../store/useMatchStore';
-import { playSound } from '../lib/sounds';
+import { playSound, playVoice } from '../lib/sounds';
 
 const MATCH_DURATION = 60; // 60 seconds match
 
@@ -76,6 +76,14 @@ const BattlePage = () => {
   const endGame = useCallback((isWinner, isSurrender = false, isDraw = false) => {
     setIsMatchActive(false);
     setBattlePhase('finished');
+
+    // Immediately clear ready state in presence for this player
+    useMatchStore.getState().clearPresenceReady();
+
+    // Play win/lose voice line
+    if (!isDraw) {
+      playVoice(isWinner ? 'you-win' : 'you-lose');
+    }
     
     // If the player didn't type a single key, accuracy should be 0, not the default 100.
     const finalAccuracy = statsRef.current.totalKeystrokes === 0 ? 0 : accuracy;

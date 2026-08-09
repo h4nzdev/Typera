@@ -38,6 +38,36 @@ const playSynth = (type, freq1, freq2, duration, vol = 0.1) => {
   osc.stop(audioCtx.currentTime + duration);
 };
 
+// ─── Voice / MP3 asset pool ──────────────────────────────────────────────────
+// Pre-load each audio asset once and reuse the same element.
+// Using a Map so we can look up by name and reset playback on each call.
+
+const voiceAssets = {
+  'you-win':  new Audio(new URL('../assets/voice/you-win.mp3',  import.meta.url).href),
+  'you-lose': new Audio(new URL('../assets/voice/you-lose.mp3', import.meta.url).href),
+  'steal':    new Audio(new URL('../assets/voice/steal.mp3',    import.meta.url).href),
+  'glitch':   new Audio(new URL('../assets/voice/glitch.mp3',   import.meta.url).href),
+  'blind':    new Audio(new URL('../assets/voice/blind.mp3',    import.meta.url).href),
+};
+
+// Set volume for voice lines
+Object.values(voiceAssets).forEach(a => { a.volume = 0.9; });
+
+/**
+ * Play a voice/MP3 asset by name.
+ * Resets the element to the start if it was already playing.
+ */
+export const playVoice = (name) => {
+  try {
+    const audio = voiceAssets[name];
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.play().catch(() => {}); // ignore autoplay policy errors silently
+  } catch (err) {
+    // Non-fatal
+  }
+};
+
 export const playSound = (soundName) => {
   try {
     initAudio();

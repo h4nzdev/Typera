@@ -25,9 +25,6 @@ const generateChallenge = (count = 15, category = 'all', mode = 'race') => {
 };
 
 // ─── Throttle helper ────────────────────────────────────────────────────────
-// Returns a function that fires at most once per `limit` ms.
-// Unlike lodash throttle, this one fires IMMEDIATELY on the first call,
-// then suppresses subsequent calls until the interval expires.
 function throttle(fn, limit) {
   let lastCall = 0;
   return (...args) => {
@@ -49,6 +46,7 @@ const useMatchStore = create((set, get) => ({
   opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
   localReady: false,
   opponentReady: false,
+  roundNumber: 1, // Strict round tracking for ready handshake
   challengeWords: [],
   gameMode: 'race',
   category: 'all',
@@ -66,7 +64,6 @@ const useMatchStore = create((set, get) => ({
   sendPowerUp: async (type) => {
     const { channel } = get();
     if (channel) {
-      // Fire-and-forget – no await needed for low-latency feel
       channel.send({
         type: 'broadcast',
         event: 'match_powerup',
@@ -84,7 +81,7 @@ const useMatchStore = create((set, get) => ({
   },
 
   setCategory: (category) => {
-    const { isHost, channel, gameMode } = get();
+    const { isHost, channel, gameMode, roundNumber } = get();
     if (!isHost) return;
     const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
     set({ category, challengeWords: newWords });
@@ -92,21 +89,20 @@ const useMatchStore = create((set, get) => ({
       channel.send({
         type: 'broadcast',
         event: 'match_setup',
-        payload: { challengeWords: newWords, category, gameMode }
+        payload: { challengeWords: newWords, category, gameMode, roundNumber }
       });
     }
   },
 
   setGameMode: (newMode) => {
-    const { isHost, channel, category } = get();
-    // Allow setting mode before channel exists (e.g., Booth setup)
+    const { isHost, channel, category, roundNumber } = get();
     const newWords = generateChallenge(newMode === 'deathmatch' ? 30 : 15, category, newMode);
     set({ gameMode: newMode, challengeWords: newWords });
     if (isHost && channel) {
       channel.send({
         type: 'broadcast',
         event: 'match_setup',
-        payload: { challengeWords: newWords, category, gameMode: newMode }
+        payload: { challengeWords: newWords, category, gameMode: newMode, roundNumber }
       });
     }
   },
@@ -117,7 +113,6 @@ const useMatchStore = create((set, get) => ({
     const combined = [...challengeWords, ...newWords];
     set({ challengeWords: combined });
     
-    // In multiplayer, the host appends and broadcasts so both players stay perfectly in sync
     if (channel && get().isHost) {
       channel.send({
         type: 'broadcast',
@@ -141,11 +136,19 @@ const useMatchStore = create((set, get) => ({
 
   setLocalReady: async () => {
     set({ localReady: true });
+    const { channel, isHost, roundNumber } = get();
+    if (channel) {
+      const { playerName } = (await import('../store/useUserStore')).default.getState();
+      await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: roundNumber });
+    }
+  },
+
+  clearPresenceReady: async () => {
+    set({ localReady: false, opponentReady: false });
     const { channel, isHost } = get();
     if (channel) {
-      // Use presence (not broadcast) so late-arriving players can still see this ready state
       const { playerName } = (await import('../store/useUserStore')).default.getState();
-      await channel.track({ isHost, playerName: playerName || 'PLAYER', isReady: true });
+      await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0 });
     }
   },
 
@@ -157,9 +160,6 @@ const useMatchStore = create((set, get) => ({
 
     const myId = crypto.randomUUID();
 
-    // ── Channel config optimizations ──────────────────────────────────────────
-    // self_broadcast: false  → Supabase won't echo our own broadcasts back to us,
-    //                          removing one full round-trip from latency.
     const newChannel = supabase.channel(`match:${code}`, {
       config: {
         presence: { key: myId },
@@ -179,14 +179,12 @@ const useMatchStore = create((set, get) => ({
       opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
       localReady: false,
       opponentReady: false,
+      roundNumber: 1,
       challengeWords: initialWords,
       localPoints: 0,
       opponentPoints: 0,
     });
 
-    // ── Throttled broadcast sender ────────────────────────────────────────────
-    // Stats are sent at most once every 50ms (~20 Hz) per keystroke.
-    // This keeps updates smooth and frequent without flooding the channel.
     const throttledSend = throttle((stats) => {
       newChannel.send({
         type: 'broadcast',
@@ -205,7 +203,6 @@ const useMatchStore = create((set, get) => ({
            connectedPlayers.push({ id: key, ...presences[0] });
         }
         
-        // Sort players so host is always first
         connectedPlayers.sort((a, b) => (a.isHost === b.isHost) ? 0 : a.isHost ? -1 : 1);
         
         set({ players: connectedPlayers });
@@ -223,38 +220,46 @@ const useMatchStore = create((set, get) => ({
             }
         }
         
-        // Auto-start transition if 2 players are in the lobby
         if (connectedPlayers.length === 2 && get().status === 'lobby') {
            set({ status: 'starting' });
            if (get().isHost) {
-             const { category, gameMode } = get();
+             const { category, gameMode, roundNumber } = get();
              const currentWords = get().challengeWords.length > 0 ? get().challengeWords : generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
              newChannel.send({
                type: 'broadcast',
                event: 'match_setup',
-               payload: { challengeWords: currentWords, category, gameMode }
+               payload: { challengeWords: currentWords, category, gameMode, roundNumber }
              });
              set({ challengeWords: currentWords });
            }
         }
 
-        // Presence-based ready detection (replaces fire-and-forget player_ready broadcast)
-        // This fires whenever any presence updates, so late-arriving players immediately
-        // see if their opponent is already ready.
+        // ── Strict Round-Based Ready Handshake ────────────────────────────
+        // A player is ONLY ready if their presence's readyRound matches the store's current round.
         if (connectedPlayers.length === 2) {
           const myId = get().myId;
+          const currentRound = get().roundNumber || 1;
           const me = connectedPlayers.find(p => p.id === myId);
           const opponent = connectedPlayers.find(p => p.id !== myId);
-          if (me?.isReady) set({ localReady: true });
-          if (opponent?.isReady) set({ opponentReady: true });
+
+          const isMeReady = me?.readyRound === currentRound;
+          const isOppReady = opponent?.readyRound === currentRound;
+
+          set({ 
+            localReady: isMeReady, 
+            opponentReady: isOppReady 
+          });
         }
       })
       .on('broadcast', { event: 'match_setup' }, (payload) => {
-        set({ 
+        set(state => ({ 
           challengeWords: payload.payload.challengeWords, 
           category: payload.payload.category || 'all',
-          gameMode: payload.payload.gameMode || 'race'
-        });
+          gameMode: payload.payload.gameMode || 'race',
+          roundNumber: payload.payload.roundNumber || state.roundNumber || 1,
+          localReady: false,
+          opponentReady: false,
+        }));
       })
       .on('broadcast', { event: 'match_append_words' }, (payload) => {
         set(state => ({ challengeWords: [...state.challengeWords, ...payload.payload.newWords] }));
@@ -273,7 +278,6 @@ const useMatchStore = create((set, get) => ({
         }, duration);
       })
       .on('broadcast', { event: 'stats_update' }, (payload) => {
-        // Only accept updates from the opponent
         if (payload.payload.id !== get().myId) {
           set({ opponentStats: payload.payload.stats });
         }
@@ -281,7 +285,6 @@ const useMatchStore = create((set, get) => ({
       .on('broadcast', { event: 'round_winner' }, (payload) => {
         const winnerId = payload.payload.id;
         const myId = get().myId;
-        // Only the OPPONENT updates from the broadcast to avoid double-counting
         if (winnerId !== myId) {
           set((state) => ({ opponentPoints: state.opponentPoints + 1 }));
         }
@@ -292,7 +295,7 @@ const useMatchStore = create((set, get) => ({
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           const { playerName } = (await import('../store/useUserStore')).default.getState();
-          await newChannel.track({ isHost, joinedAt: Date.now(), playerName: playerName || 'PLAYER' });
+          await newChannel.track({ isHost, joinedAt: Date.now(), playerName: playerName || 'PLAYER', readyRound: 0 });
         }
       });
   },
@@ -302,21 +305,22 @@ const useMatchStore = create((set, get) => ({
     if (channel) {
       await channel.unsubscribe();
     }
-    set({ matchCode: null, channel: null, players: [], status: 'lobby', challengeWords: [], _throttledBroadcast: null });
+    set({ matchCode: null, channel: null, players: [], status: 'lobby', challengeWords: [], roundNumber: 1, _throttledBroadcast: null });
   },
 
   resetRound: () => {
+    const nextRound = (get().roundNumber || 1) + 1;
     set({ 
+      roundNumber: nextRound,
       opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
       localReady: false,
       opponentReady: false,
     });
     const { isHost, channel, category, gameMode } = get();
-    // Reset presence isReady so both players must re-confirm ready for next round
     if (channel) {
       const resetPresence = async () => {
         const { playerName } = (await import('../store/useUserStore')).default.getState();
-        await channel.track({ isHost, playerName: playerName || 'PLAYER', isReady: false });
+        await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0 });
       };
       resetPresence();
     }
@@ -326,13 +330,14 @@ const useMatchStore = create((set, get) => ({
       channel.send({
         type: 'broadcast',
         event: 'match_setup',
-        payload: { challengeWords: newWords, category, gameMode }
+        payload: { challengeWords: newWords, category, gameMode, roundNumber: nextRound }
       });
     }
   },
 
   resetMatch: () => {
     set({ 
+      roundNumber: 1,
       opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
       localReady: false,
       opponentReady: false,
@@ -340,19 +345,24 @@ const useMatchStore = create((set, get) => ({
       opponentPoints: 0,
     });
     const { isHost, channel, category, gameMode } = get();
+    if (channel) {
+      const resetPresence = async () => {
+        const { playerName } = (await import('../store/useUserStore')).default.getState();
+        await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0 });
+      };
+      resetPresence();
+    }
     if (isHost && channel) {
       const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
       set({ challengeWords: newWords });
       channel.send({
         type: 'broadcast',
         event: 'match_setup',
-        payload: { challengeWords: newWords, category, gameMode }
+        payload: { challengeWords: newWords, category, gameMode, roundNumber: 1 }
       });
     }
   },
 
-  // ── High-frequency stats broadcast (throttled at 50ms = 20Hz) ──────────────
-  // Call this on EVERY keystroke. The throttle ensures we don't flood the channel.
   broadcastStats: (stats) => {
     const { _throttledBroadcast } = get();
     if (_throttledBroadcast) {
@@ -362,11 +372,9 @@ const useMatchStore = create((set, get) => ({
 
   recordRoundWinner: async (winnerId) => {
     const { channel } = get();
-    // Update the winner's own score locally immediately
     if (winnerId === get().myId) {
       set((state) => ({ localPoints: state.localPoints + 1 }));
     }
-    // Broadcast so the opponent knows who won
     if (channel) {
       await channel.send({
         type: 'broadcast',

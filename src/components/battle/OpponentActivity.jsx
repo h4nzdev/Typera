@@ -3,6 +3,10 @@ import ArcadeText from '../arcade/ArcadeText';
 import { Activity } from 'lucide-react';
 import gsap from 'gsap';
 
+import stealBanner from '../../assets/banner/steal-banner.png';
+import glitchBanner from '../../assets/banner/glitch-banner.png';
+import blindBanner from '../../assets/banner/blind-banner.png';
+
 const DEBUFF_CONFIG = {
   steal: {
     label: 'STEAL',
@@ -10,6 +14,7 @@ const DEBUFF_CONFIG = {
     color: '#ff003c',
     glow: 'rgba(255,0,60,0.9)',
     icon: '⚡',
+    image: stealBanner,
   },
   blind: {
     label: 'BLIND',
@@ -17,6 +22,7 @@ const DEBUFF_CONFIG = {
     color: '#b026ff',
     glow: 'rgba(176,38,255,0.9)',
     icon: '👁',
+    image: blindBanner,
   },
   glitch: {
     label: 'GLITCH',
@@ -24,6 +30,7 @@ const DEBUFF_CONFIG = {
     color: '#fffb00',
     glow: 'rgba(255,251,0,0.9)',
     icon: '⚠',
+    image: glitchBanner,
   },
 };
 
@@ -140,10 +147,9 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
         >
           {/* Outer banner border */}
           <div
-            className="relative border-b-4 px-3 py-2 flex flex-col items-center"
+            className="relative border-b-4 px-2 py-1.5 flex flex-col items-center justify-center bg-black/95"
             style={{
               borderColor: activeCfg.color,
-              background: `${activeCfg.color}15`,
               boxShadow: `0 4px 20px ${activeCfg.glow}, inset 0 0 20px ${activeCfg.color}10`,
             }}
           >
@@ -154,25 +160,14 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
             <div className="absolute top-1 left-1 w-2 h-2 border-t-2 border-l-2" style={{ borderColor: activeCfg.color }} />
             <div className="absolute top-1 right-1 w-2 h-2 border-t-2 border-r-2" style={{ borderColor: activeCfg.color }} />
 
-            <div className="flex items-center gap-2 w-full justify-center">
-              <span className="text-lg" style={{ filter: `drop-shadow(0 0 6px ${activeCfg.color})` }}>
-                {activeCfg.icon}
-              </span>
-              <div className="flex flex-col items-center">
-                <div
-                  className="font-[family-name:var(--font-arcade)] text-xl tracking-widest leading-none"
-                  style={{ color: activeCfg.color, textShadow: `0 0 8px ${activeCfg.color}, 0 0 20px ${activeCfg.glow}` }}
-                >
-                  {activeCfg.label}
-                </div>
-                <div
-                  className="font-[family-name:var(--font-arcade)] text-[8px] tracking-widest mt-0.5"
-                  style={{ color: `${activeCfg.color}90` }}
-                >
-                  {activeCfg.sub}
-                </div>
-              </div>
-            </div>
+            {/* Banner PNG Image */}
+            <img
+              src={activeCfg.image}
+              alt={activeCfg.label}
+              className="max-h-16 xl:max-h-20 w-auto object-contain select-none pointer-events-none"
+              style={{ filter: `drop-shadow(0 0 8px ${activeCfg.color})` }}
+              draggable={false}
+            />
 
             {/* Scanning bottom bar */}
             <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden">

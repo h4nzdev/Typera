@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
+import { playVoice } from '../../lib/sounds';
+
+import stealBanner from '../../assets/banner/steal-banner.png';
+import glitchBanner from '../../assets/banner/glitch-banner.png';
+import blindBanner from '../../assets/banner/blind-banner.png';
 
 const DEBUFF_CONFIG = {
   steal: {
@@ -8,6 +13,7 @@ const DEBUFF_CONFIG = {
     color: '#ff003c',
     glow: 'rgba(255,0,60,0.85)',
     icon: '⚡',
+    image: stealBanner,
   },
   blind: {
     label: 'BLINDED!',
@@ -15,6 +21,7 @@ const DEBUFF_CONFIG = {
     color: '#b026ff',
     glow: 'rgba(176,38,255,0.85)',
     icon: '👁',
+    image: blindBanner,
   },
   glitch: {
     label: 'GLITCHED!',
@@ -22,6 +29,7 @@ const DEBUFF_CONFIG = {
     color: '#fffb00',
     glow: 'rgba(255,251,0,0.85)',
     icon: '⚠',
+    image: glitchBanner,
   },
 };
 
@@ -45,6 +53,9 @@ const DebuffBanner = ({ activeDebuff }) => {
 
     setCfg(newCfg);
     setMounted(true);
+
+    // Play the voice line immediately when the debuff hits
+    playVoice(activeDebuff.type);
 
     // Wait one frame for the DOM to render, then animate in
     requestAnimationFrame(() => {
@@ -93,17 +104,17 @@ const DebuffBanner = ({ activeDebuff }) => {
   return (
     // Outer wrapper: fixed center position, overflow hidden to clip slide-in
     <div
-      className="absolute top-0 left-1/2 z-[200] pointer-events-none overflow-visible"
+      className="absolute top-2 left-1/2 z-[200] pointer-events-none overflow-visible"
       style={{ transform: 'translateX(-50%)' }}
     >
       {/* Animated panel — GSAP targets this */}
       <div ref={panelRef} style={{ willChange: 'transform, opacity' }}>
         {/* Pixel border outer frame */}
         <div
-          className="relative border-4 p-[3px] mt-3"
+          className="relative border-4 p-[3px] mt-2 flex flex-col items-center justify-center bg-black/90"
           style={{
             borderColor: cfg.color,
-            boxShadow: `0 0 0 2px #000, 0 0 25px ${cfg.glow}, 0 0 70px ${cfg.glow.replace('0.85', '0.25')}`,
+            boxShadow: `0 0 0 2px #000, 0 0 35px ${cfg.glow}, 0 0 80px ${cfg.glow.replace('0.85', '0.3')}`,
           }}
         >
           {/* Corner pixel squares */}
@@ -115,60 +126,26 @@ const DebuffBanner = ({ activeDebuff }) => {
             />
           ))}
 
-          {/* Inner panel */}
-          <div
-            className="border-2 border-black/70 bg-black/96 px-7 py-3 flex items-center gap-5"
-            style={{ minWidth: 300 }}
-          >
-            {/* Icon */}
-            <span
-              className="text-4xl shrink-0 select-none"
-              style={{ filter: `drop-shadow(0 0 12px ${cfg.color})`, animation: 'iconPulse 0.5s ease-in-out 3' }}
-            >
-              {cfg.icon}
-            </span>
-
-            {/* Text block */}
-            <div className="flex flex-col gap-0.5 flex-1">
-              <span
-                className="font-[family-name:var(--font-arcade)] text-[9px] tracking-[0.4em]"
-                style={{ color: `${cfg.color}70` }}
-              >
-                ▶ INCOMING SKILL
-              </span>
-              <span
-                className="font-[family-name:var(--font-arcade)] text-3xl tracking-widest leading-none"
-                style={{
-                  color: cfg.color,
-                  textShadow: `0 0 8px ${cfg.color}, 0 0 22px ${cfg.glow}`,
-                }}
-              >
-                {cfg.label}
-              </span>
-              <span
-                className="font-[family-name:var(--font-arcade)] text-[9px] tracking-[0.18em] mt-0.5"
-                style={{ color: `${cfg.color}80` }}
-              >
-                {cfg.sub}
-              </span>
-            </div>
-
-            {/* Blinking warning indicator */}
-            <span
-              className="font-[family-name:var(--font-arcade)] text-sm tracking-widest shrink-0 animate-pulse"
-              style={{ color: cfg.color }}
-            >
-              !!
-            </span>
+          {/* Banner Graphic Image */}
+          <div className="relative overflow-hidden p-2 flex items-center justify-center">
+            <img
+              src={cfg.image}
+              alt={cfg.label}
+              className="max-h-24 md:max-h-28 w-auto object-contain select-none pointer-events-none"
+              style={{
+                filter: `drop-shadow(0 0 12px ${cfg.color}) drop-shadow(0 0 25px ${cfg.glow})`,
+              }}
+              draggable={false}
+            />
           </div>
 
           {/* Bottom scan line */}
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden">
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] overflow-hidden">
             <div
               className="h-full w-1/3"
               style={{
                 background: cfg.color,
-                boxShadow: `0 0 8px ${cfg.color}`,
+                boxShadow: `0 0 10px ${cfg.color}`,
                 animation: 'bannerScan 0.9s linear infinite',
               }}
             />
@@ -180,10 +157,6 @@ const DebuffBanner = ({ activeDebuff }) => {
         @keyframes bannerScan {
           0%   { transform: translateX(-100%) }
           100% { transform: translateX(400%) }
-        }
-        @keyframes iconPulse {
-          0%, 100% { transform: scale(1); }
-          50%       { transform: scale(1.25); }
         }
       `}</style>
     </div>
