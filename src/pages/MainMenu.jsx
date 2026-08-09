@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import ArcadeText from '../components/arcade/ArcadeText';
 import ArcadeButton from '../components/arcade/ArcadeButton';
 import useUserStore from '../store/useUserStore';
+import useMatchStore from '../store/useMatchStore';
 import { Settings } from 'lucide-react';
 
 const MainMenu = () => {
@@ -14,6 +15,9 @@ const MainMenu = () => {
   const [showNameModal, setShowNameModal] = useState(false);
   const [tempName, setTempName] = useState('');
   
+  const [boothModeFlow, setBoothModeFlow] = useState(null); // null, 'name', 'action'
+  const { setGameMode } = useMatchStore();
+  
   // Show modal on first load if no name is set
   useEffect(() => {
     if (!playerName) {
@@ -22,7 +26,7 @@ const MainMenu = () => {
   }, [playerName]);
 
   useLayoutEffect(() => {
-    if (showNameModal) return; // Don't run main animations if modal is active
+    if (showNameModal || boothModeFlow) return; // Don't run main animations if modal is active
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline();
@@ -44,12 +48,25 @@ const MainMenu = () => {
     }
   };
 
+  const handleBoothNameSubmit = () => {
+    if (tempName.trim().length > 0) {
+      setPlayerName(tempName.toUpperCase());
+      setBoothModeFlow('action');
+    }
+  };
+
+  const handleBoothAction = (action) => {
+    setGameMode('classic_booth');
+    setBoothModeFlow(null);
+    navigate(action === 'create' ? '/create' : '/join');
+  };
+
   return (
     <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center bg-black/50 overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,243,255,0.05)_0%,transparent_60%)] pointer-events-none"></div>
       
-      {/* Name Entry Modal */}
-      {showNameModal && (
+      {/* Name Entry Modal (Normal) */}
+      {showNameModal && !boothModeFlow && (
         <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-4">
           <ArcadeText color="cyan" glow className="text-4xl md:text-5xl mb-8 text-center leading-tight">
             {!playerName ? 'WELCOME TO THE ARENA' : 'UPDATE YOUR ID'}
@@ -80,8 +97,57 @@ const MainMenu = () => {
         </div>
       )}
 
+      {/* Booth Mode Modals */}
+      {boothModeFlow === 'name' && (
+        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-4">
+          <ArcadeText color="yellow" glow className="text-4xl md:text-5xl mb-8 text-center leading-tight">
+            BOOTH MODE
+          </ArcadeText>
+          <div className="flex flex-col gap-6 items-center w-full max-w-md">
+            <ArcadeText color="white" className="text-sm tracking-widest text-center">
+              ENTER YOUR NAME FOR THIS MATCH
+            </ArcadeText>
+            <input 
+              type="text" 
+              maxLength={5}
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value.toUpperCase())}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleBoothNameSubmit(); }}
+              className="bg-black/80 border-2 border-[var(--color-neon-yellow)] rounded text-[var(--color-neon-yellow)] px-4 py-3 text-4xl font-[inherit] uppercase text-center outline-none focus:shadow-[0_0_20px_rgba(255,251,0,0.8)] transition-shadow w-48"
+              placeholder="AAAAA"
+              autoFocus
+            />
+            <ArcadeButton color="yellow" className="w-48 py-3 mt-4" onClick={handleBoothNameSubmit} disabled={!tempName.trim()}>
+              NEXT
+            </ArcadeButton>
+            <ArcadeButton color="white" className="text-xs py-2 w-48" onClick={() => setBoothModeFlow(null)}>
+              CANCEL
+            </ArcadeButton>
+          </div>
+        </div>
+      )}
+
+      {boothModeFlow === 'action' && (
+        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-4">
+          <ArcadeText color="yellow" glow className="text-4xl md:text-5xl mb-8 text-center leading-tight">
+            BOOTH MATCH
+          </ArcadeText>
+          <div className="flex flex-col gap-6 items-center w-full max-w-md">
+            <ArcadeButton color="cyan" className="w-64 py-4" onClick={() => handleBoothAction('create')}>
+              CREATE MATCH
+            </ArcadeButton>
+            <ArcadeButton color="pink" className="w-64 py-4" onClick={() => handleBoothAction('join')}>
+              JOIN MATCH
+            </ArcadeButton>
+            <ArcadeButton color="white" className="text-xs py-2 w-64 mt-4" onClick={() => setBoothModeFlow(null)}>
+              CANCEL
+            </ArcadeButton>
+          </div>
+        </div>
+      )}
+
       {/* Main UI */}
-      {!showNameModal && (
+      {!showNameModal && !boothModeFlow && (
         <>
           <div className="absolute top-8 left-8 flex items-center gap-4 z-20">
             <ArcadeText color="white" className="text-sm tracking-widest opacity-50">
@@ -111,6 +177,9 @@ const MainMenu = () => {
           </div>
           
           <div className="flex flex-col gap-6 z-10 w-72">
+            <ArcadeButton className="menu-btn w-full" color="yellow" onClick={() => { setTempName(''); setBoothModeFlow('name'); }}>
+              CLASSIC 1V1 (BOOTH)
+            </ArcadeButton>
             <ArcadeButton className="menu-btn w-full" color="cyan" onClick={() => navigate('/create')}>
               CREATE MATCH
             </ArcadeButton>

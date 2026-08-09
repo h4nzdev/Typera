@@ -31,7 +31,10 @@ const BattlePage = () => {
     setPaused,
     status,
     activeDebuff,
-    opponentDebuff
+    opponentDebuff,
+    localPoints,
+    opponentPoints,
+    myId
   } = useMatchStore();
   
   const challengeText = React.useMemo(() => challengeWords.map(w => w.word).join(" "), [challengeWords]);
@@ -54,8 +57,9 @@ const BattlePage = () => {
   const [localDamage, setLocalDamage] = useState(0);
   const [isMatchActive, setIsMatchActive] = useState(false);
   
-  const [battlePhase, setBattlePhase] = useState('waiting'); // waiting, countdown, playing
+  const [battlePhase, setBattlePhase] = useState('waiting'); // waiting, countdown, playing, round_over
   const [countdown, setCountdown] = useState(null);
+  const [roundWinnerName, setRoundWinnerName] = useState('');
 
   const statsRef = useRef({ totalKeystrokes: 0, errors: 0, wordErrors: 0 });
   const maxComboRef = useRef(0);
@@ -91,6 +95,45 @@ const BattlePage = () => {
       setBattlePhase('countdown');
     }
   }, [localReady, opponentReady, battlePhase]);
+
+  // Handle Classic Booth Points & Rounds
+  const prevLocalPoints = useRef(localPoints);
+  const prevOpponentPoints = useRef(opponentPoints);
+
+  useEffect(() => {
+    if (gameMode !== 'classic_booth') return;
+    
+    if (localPoints > prevLocalPoints.current || opponentPoints > prevOpponentPoints.current) {
+       const isLocalWin = localPoints > prevLocalPoints.current;
+       prevLocalPoints.current = localPoints;
+       prevOpponentPoints.current = opponentPoints;
+       
+       if (localPoints >= 3) {
+         endGame(true, false, false);
+       } else if (opponentPoints >= 3) {
+         endGame(false, false, false);
+       } else {
+         setBattlePhase('round_over');
+         setIsMatchActive(false);
+         setRoundWinnerName(isLocalWin ? 'YOU' : 'OPPONENT');
+         playSound('start'); // winning round sound
+         
+         setTimeout(() => {
+            setTyped('');
+            setCombo(0);
+            setWpm(0);
+            setAccuracy(100);
+            setLocalDamage(0);
+            statsRef.current = { totalKeystrokes: 0, errors: 0, wordErrors: 0 };
+            
+            if (isHost) {
+               useMatchStore.getState().resetRound();
+            }
+            setBattlePhase('waiting');
+         }, 4000);
+       }
+    }
+  }, [localPoints, opponentPoints, gameMode, endGame, isHost]);
 
   // Block the back button during the entire battle sequence
   useEffect(() => {
@@ -332,6 +375,13 @@ const BattlePage = () => {
          setTimeout(() => endGame(true, false, false), 300);
       }
       
+      if (gameMode === 'classic_booth' && next === challengeText) {
+         // I am the winner of the round!
+         useMatchStore.getState().recordRoundWinner(myId);
+         setBattlePhase('round_over');
+         setIsMatchActive(false);
+      }
+      
       return next;
     });
   }, [typed, startTime, timeLeft, wpm, accuracy, combo, broadcastStats, battlePhase, endGame, isPaused, triggerShake, localDamage, gameMode, challengeWords, challengeText]);
@@ -352,10 +402,31 @@ const BattlePage = () => {
             // Time ran out! Compare progress to decide winner
             let isWinner = false;
             let isDraw = false;
-            if (gameMode === 'race') {
+            if (gameMode === 'race' || gameMode === 'classic_booth') {
               const finalProgress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
               isWinner = finalProgress > opponentStats.progress;
               isDraw = finalProgress === opponentStats.progress;
+              
+              if (gameMode === 'classic_booth') {
+                if (isWinner && !isDraw) {
+                  useMatchStore.getState().recordRoundWinner(myId);
+                } else if (isDraw) {
+                  // No points for draw, just reset round
+                  setBattlePhase('round_over');
+                  setRoundWinnerName('NOBODY (DRAW)');
+                  setTimeout(() => {
+                    setTyped('');
+                    setCombo(0);
+                    setWpm(0);
+                    setAccuracy(100);
+                    setLocalDamage(0);
+                    statsRef.current = { totalKeystrokes: 0, errors: 0, wordErrors: 0 };
+                    if (isHost) useMatchStore.getState().resetRound();
+                    setBattlePhase('waiting');
+                  }, 4000);
+                }
+                return 0;
+              }
             } else {
               isWinner = myHp > opponentHp;
               isDraw = myHp === opponentHp;
@@ -482,6 +553,32 @@ const BattlePage = () => {
         </div>
       )}
 
+      {/* Round Over Overlay (Booth Mode) */}
+      {battlePhase === 'round_over' && !isPaused && (
+        <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center pointer-events-none backdrop-blur-md">
+          <ArcadeText as="h1" color="yellow" glow className="text-6xl md:text-8xl mb-4 text-center animate-bounce">
+            ROUND OVER!
+          </ArcadeText>
+          <ArcadeText color="white" className="text-2xl md:text-4xl tracking-widest text-center mt-4">
+            {roundWinnerName} WON THIS ROUND
+          </ArcadeText>
+          <div className="flex gap-12 mt-12 items-center">
+             <div className="flex flex-col items-center gap-2">
+                <ArcadeText color="cyan" className="text-xl">YOU</ArcadeText>
+                <ArcadeText color="cyan" glow className="text-6xl">{localPoints}</ArcadeText>
+             </div>
+             <ArcadeText color="white" className="text-4xl opacity-50">-</ArcadeText>
+             <div className="flex flex-col items-center gap-2">
+                <ArcadeText color="pink" className="text-xl">OPPONENT</ArcadeText>
+                <ArcadeText color="pink" glow className="text-6xl">{opponentPoints}</ArcadeText>
+             </div>
+          </div>
+          <ArcadeText color="yellow" className="text-lg tracking-widest mt-12 animate-pulse opacity-80">
+            NEXT ROUND STARTING SOON...
+          </ArcadeText>
+        </div>
+      )}
+
       <div className="w-full mx-auto flex flex-col z-10 h-full flex-grow justify-between max-w-[1800px]">
         {/* Top Section */}
         <div className="flex flex-col gap-6 w-full">
@@ -499,6 +596,7 @@ const BattlePage = () => {
                hp={isHost ? myHp : opponentHp}
                maxHp={MAX_HP}
                showHp={gameMode === 'deathmatch'}
+               points={gameMode === 'classic_booth' ? (isHost ? localPoints : opponentPoints) : null}
             />
             <div className="flex flex-col items-center mx-4">
               <ArcadeText as="div" color="cyan" glow className="text-7xl italic font-bold -skew-x-12">V<span className="text-[var(--color-neon-pink)]">S</span></ArcadeText>
@@ -514,6 +612,7 @@ const BattlePage = () => {
                hp={!isHost ? myHp : opponentHp}
                maxHp={MAX_HP}
                showHp={gameMode === 'deathmatch'}
+               points={gameMode === 'classic_booth' ? (!isHost ? localPoints : opponentPoints) : null}
             />
           </div>
         </div>

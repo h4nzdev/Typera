@@ -37,6 +37,8 @@ const useMatchStore = create((set, get) => ({
   challengeWords: [],
   gameMode: 'race',
   category: 'all',
+  localPoints: 0,
+  opponentPoints: 0,
   isPaused: false,
   activeDebuff: null,
   opponentDebuff: null,
@@ -230,6 +232,13 @@ const useMatchStore = create((set, get) => ({
           set({ opponentStats: payload.payload.stats });
         }
       })
+      .on('broadcast', { event: 'round_winner' }, (payload) => {
+        if (payload.payload.id === get().myId) {
+          set((state) => ({ localPoints: state.localPoints + 1 }));
+        } else {
+          set((state) => ({ opponentPoints: state.opponentPoints + 1 }));
+        }
+      })
       .on('broadcast', { event: 'match_status' }, (payload) => {
         set({ status: payload.payload.status });
       })
@@ -248,11 +257,31 @@ const useMatchStore = create((set, get) => ({
     set({ matchCode: null, channel: null, players: [], status: 'lobby', challengeWords: [] });
   },
 
+  resetRound: () => {
+    set({ 
+      opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
+      localReady: false,
+      opponentReady: false,
+    });
+    const { isHost, channel, category, gameMode } = get();
+    if (isHost && channel) {
+      const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
+      set({ challengeWords: newWords });
+      channel.send({
+        type: 'broadcast',
+        event: 'match_setup',
+        payload: { challengeWords: newWords, category, gameMode }
+      });
+    }
+  },
+
   resetMatch: () => {
     set({ 
       opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
       localReady: false,
       opponentReady: false,
+      localPoints: 0,
+      opponentPoints: 0,
       // If host restarts, regenerate text for the new match and broadcast it
     });
     const { isHost, channel, category, gameMode } = get();
@@ -275,6 +304,23 @@ const useMatchStore = create((set, get) => ({
         event: 'stats_update',
         payload: { id: myId, stats },
       });
+    }
+  },
+
+  recordRoundWinner: async (winnerId) => {
+    const { channel } = get();
+    if (channel) {
+      await channel.send({
+        type: 'broadcast',
+        event: 'round_winner',
+        payload: { id: winnerId },
+      });
+      // also update locally immediately just in case
+      if (winnerId === get().myId) {
+        set((state) => ({ localPoints: state.localPoints + 1 }));
+      } else {
+        set((state) => ({ opponentPoints: state.opponentPoints + 1 }));
+      }
     }
   },
 

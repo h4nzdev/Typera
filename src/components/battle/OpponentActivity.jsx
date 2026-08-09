@@ -8,6 +8,19 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
   const borderClass = color === 'cyan' ? 'border-[var(--color-neon-cyan-muted)]' : 'border-[var(--color-neon-pink-muted)]';
   const shadowClass = color === 'cyan' ? 'shadow-[0_0_10px_var(--color-neon-cyan-muted)]' : 'shadow-[0_0_10px_var(--color-neon-pink-muted)]';
 
+  const [isHit, setIsHit] = React.useState(false);
+  const prevHp = React.useRef(hp);
+
+  React.useEffect(() => {
+    if (showHp && hp < prevHp.current) {
+      setIsHit(true);
+      const timer = setTimeout(() => setIsHit(false), 200);
+      prevHp.current = hp;
+      return () => clearTimeout(timer);
+    }
+    prevHp.current = hp;
+  }, [hp, showHp]);
+
   const isSteal = debuff?.type === 'steal';
   const isBlind = debuff?.type === 'blind';
   const isGlitch = debuff?.type === 'glitch';
@@ -40,8 +53,8 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
                 <span className="text-red-400">HP</span>
                 <span className="text-white">{hp}/{maxHp}</span>
              </div>
-             <div className="w-full h-3 bg-red-900/40 rounded-sm border border-red-900/50 overflow-hidden relative">
-                <div className="h-full bg-red-500 shadow-[0_0_10px_red]" style={{ width: `${Math.max(0, (hp / maxHp) * 100)}%`, transition: 'width 0.3s ease-out' }}></div>
+             <div className={`w-full h-3 rounded-sm border overflow-hidden relative transition-colors ${isHit ? 'bg-white border-white animate-shake' : 'bg-red-900/40 border-red-900/50'}`}>
+                <div className={`h-full shadow-[0_0_10px_red] ${isHit ? 'bg-white' : 'bg-red-500'}`} style={{ width: `${Math.max(0, (hp / maxHp) * 100)}%`, transition: 'width 0.3s ease-out' }}></div>
              </div>
           </div>
         )}

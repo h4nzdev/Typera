@@ -2,7 +2,7 @@ import React from 'react';
 import ArcadeText from '../arcade/ArcadeText';
 import { User } from 'lucide-react';
 
-const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', reverse = false, hp, maxHp, showHp = false }) => {
+const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', reverse = false, hp, maxHp, showHp = false, points = null }) => {
   const borderColor = color === 'cyan' ? 'border-[var(--color-neon-cyan)] shadow-[0_0_15px_var(--color-neon-cyan-muted)]' : 'border-[var(--color-neon-pink)] shadow-[0_0_15px_var(--color-neon-pink-muted)]';
   const textColor = color === 'cyan' ? 'text-[var(--color-neon-cyan)]' : 'text-[var(--color-neon-pink)]';
   const barColor = color === 'cyan' ? 'bg-[var(--color-neon-cyan)]' : 'bg-[var(--color-neon-pink)]';
@@ -10,6 +10,19 @@ const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', rever
 
   const segments = 12;
   const activeSegments = Math.round((progress / 100) * segments);
+  
+  const [isHit, setIsHit] = React.useState(false);
+  const prevHp = React.useRef(hp);
+
+  React.useEffect(() => {
+    if (showHp && hp < prevHp.current) {
+      setIsHit(true);
+      const timer = setTimeout(() => setIsHit(false), 200);
+      prevHp.current = hp;
+      return () => clearTimeout(timer);
+    }
+    prevHp.current = hp;
+  }, [hp, showHp]);
 
   // Chevron shape for the progress bar segments
   const clipPathRight = 'polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%, 20% 50%)';
@@ -41,8 +54,8 @@ const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', rever
                 <span className="text-red-400">HP</span>
                 <span className="text-white">{hp}/{maxHp}</span>
              </div>
-             <div className="w-full h-2 md:h-3 bg-red-900/40 rounded-sm border border-red-900/50 overflow-hidden relative">
-                <div className="h-full bg-red-500 shadow-[0_0_10px_red]" style={{ width: `${Math.max(0, (hp / maxHp) * 100)}%`, transition: 'width 0.3s ease-out' }}></div>
+             <div className={`w-full h-2 md:h-3 rounded-sm border overflow-hidden relative transition-colors ${isHit ? 'bg-white border-white animate-shake' : 'bg-red-900/40 border-red-900/50'}`}>
+                <div className={`h-full shadow-[0_0_10px_red] ${isHit ? 'bg-white' : 'bg-red-500'}`} style={{ width: `${Math.max(0, (hp / maxHp) * 100)}%`, transition: 'width 0.3s ease-out' }}></div>
              </div>
           </div>
         )}
@@ -62,6 +75,17 @@ const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', rever
           <span className="text-gray-500">WPM </span>
           <span className={textColor}>{wpm}</span>
         </div>
+
+        {points !== null && (
+          <div className="flex gap-2 mt-1">
+            {[1, 2, 3].map((star) => (
+              <div 
+                key={star} 
+                className={`w-4 h-4 rounded-full border border-[var(--color-neon-yellow)] ${points >= star ? 'bg-[var(--color-neon-yellow)] shadow-[0_0_10px_var(--color-neon-yellow)]' : 'bg-black/50'}`}
+              ></div>
+            ))}
+          </div>
+        )}
       </div>
       
       <div className={`flex flex-col justify-center ${reverse ? 'items-start mr-2 md:mr-6' : 'items-end ml-2 md:ml-6'} mt-6 md:mt-8`}>

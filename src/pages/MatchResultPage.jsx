@@ -67,7 +67,7 @@ const MatchResultPage = () => {
     return () => ctx.revert();
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = async (autoSave = false) => {
     if (!playerName || playerName.trim().length === 0) return;
     
     setIsSaving(true);
@@ -108,9 +108,38 @@ const MatchResultPage = () => {
       setSaveError("FAILED TO SAVE.");
     } else {
       setSubmitted(true);
-      setTimeout(() => navigate('/leaderboard'), 1000);
+      if (matchData.mode !== 'classic_booth') {
+        setTimeout(() => navigate('/leaderboard'), 1000);
+      }
     }
   };
+
+  const hasAutoSaved = useRef(false);
+
+  useEffect(() => {
+    if (matchData.mode === 'classic_booth' && !hasAutoSaved.current) {
+       hasAutoSaved.current = true;
+       
+       if (isWinner && !isDraw && (wpm > 0 || accuracy > 0)) {
+          handleSave(true);
+       }
+       
+       // Auto kick back to main menu after 8 seconds
+       const timer = setTimeout(() => {
+          if (channel) {
+             channel.send({
+                type: 'broadcast',
+                event: 'match_status',
+                payload: { status: 'cancelled' }
+             });
+          }
+          leaveMatch();
+          navigate('/');
+       }, 8000);
+       
+       return () => clearTimeout(timer);
+    }
+  }, [matchData.mode, isWinner, isDraw, wpm, accuracy, channel, leaveMatch, navigate]);
 
   return (
     <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center bg-black/90 relative overflow-hidden">
@@ -127,8 +156,13 @@ const MatchResultPage = () => {
           <ArcadeText color="white" className="result-subtitle text-2xl tracking-widest">
             {matchData.mode === 'solo' 
               ? 'PRACTICE SESSION FINISHED' 
-              : (isDraw ? "IT'S A TIE!" : (isWinner ? (matchData.surrendered ? 'OPPONENT SURRENDERED' : (submitted ? `${playerName || 'PLAYER'} WINS` : `${playerName || 'PLAYER'} WINS`)) : 'YOU LOSE!'))}
+              : (isDraw ? "IT'S A TIE!" : (isWinner ? (matchData.surrendered ? 'OPPONENT SURRENDERED' : (submitted ? 'SCORE SAVED TO LEADERBOARD' : `${playerName || 'PLAYER'} WINS`)) : 'YOU LOSE!'))}
           </ArcadeText>
+          {matchData.mode === 'classic_booth' && (
+             <ArcadeText color="yellow" className="text-sm tracking-widest mt-2 animate-pulse">
+               RETURNING TO LOBBY SHORTLY...
+             </ArcadeText>
+          )}
         </div>
 
         <div className="result-stats flex flex-col gap-4 my-8">
@@ -154,17 +188,19 @@ const MatchResultPage = () => {
           )}
 
           <div className="result-btns flex flex-wrap justify-center gap-4 md:gap-6 mt-4">
-            <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
-              if (matchData.mode === 'solo') {
-                navigate('/practice');
-              } else {
-                useMatchStore.getState().resetMatch();
-                navigate('/battle');
-              }
-            }} disabled={isSaving}>
-              PLAY AGAIN
-            </ArcadeButton>
-            {matchData.mode !== 'solo' && (
+            {matchData.mode !== 'classic_booth' && (
+              <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
+                if (matchData.mode === 'solo') {
+                  navigate('/practice');
+                } else {
+                  useMatchStore.getState().resetMatch();
+                  navigate('/battle');
+                }
+              }} disabled={isSaving}>
+                PLAY AGAIN
+              </ArcadeButton>
+            )}
+            {matchData.mode !== 'solo' && matchData.mode !== 'classic_booth' && (
               <>
                 <ArcadeButton color="pink" className="whitespace-nowrap" onClick={() => {
                   const { isHost, leaveMatch } = useMatchStore.getState();
