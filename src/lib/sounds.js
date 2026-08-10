@@ -67,8 +67,8 @@ let bgmVolume = 0.35;
 let isMuted = false;
 
 const bgmAssets = {
-  menu:   new Audio(new URL('../assets/music/bg-music2.mp3', import.meta.url).href),
-  battle: new Audio(new URL('../assets/music/bg-music.mp3',  import.meta.url).href),
+  menu:   new Audio(new URL('../assets/music/bg-music.mp3',  import.meta.url).href),
+  battle: new Audio(new URL('../assets/music/bg-music2.mp3', import.meta.url).href),
 };
 
 Object.values(bgmAssets).forEach(a => {
