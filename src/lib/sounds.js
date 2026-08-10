@@ -48,6 +48,7 @@ const voiceAssets = {
   'type':     new Audio(new URL('../assets/voice/type.mp3',     import.meta.url).href),
   'powerup':  new Audio(new URL('../assets/powerup.mp3',        import.meta.url).href),
   'combo':    new Audio(new URL('../assets/voice/combo.mp3',    import.meta.url).href),
+  'freeze':   new Audio(new URL('../assets/voice/freeze.mp3',   import.meta.url).href),
 };
 
 Object.values(voiceAssets).forEach(a => { a.volume = 0.9; });
@@ -76,7 +77,7 @@ let currentType = null;
 let bgmVolume = 0.35;
 let isMuted = false;
 
-const bgmSingleAudio = new Audio(new URL('../assets/music/bg-music2.mp3', import.meta.url).href);
+const bgmSingleAudio = new Audio(new URL('../assets/music/bg-music.mp3', import.meta.url).href);
 bgmSingleAudio.loop = true;
 bgmSingleAudio.volume = bgmVolume;
 

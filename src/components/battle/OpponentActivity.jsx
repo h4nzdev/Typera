@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import stealBanner from '../../assets/banner/steal-banner.png';
 import glitchBanner from '../../assets/banner/glitch-banner.png';
 import blindBanner from '../../assets/banner/blind-banner.png';
+import freezeBanner from '../../assets/banner/freeze.png';
 
 const DEBUFF_CONFIG = {
   steal: {
@@ -31,6 +32,14 @@ const DEBUFF_CONFIG = {
     glow: 'rgba(255,251,0,0.9)',
     icon: '⚠',
     image: glitchBanner,
+  },
+  freeze: {
+    label: 'FREEZE',
+    sub: 'KEYBOARD FROZEN',
+    color: '#00f3ff',
+    glow: 'rgba(0,243,255,0.9)',
+    icon: '❄',
+    image: freezeBanner,
   },
 };
 
