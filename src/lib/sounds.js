@@ -66,15 +66,14 @@ let currentType = null;
 let bgmVolume = 0.35;
 let isMuted = false;
 
-const bgmAssets = {
-  menu:   new Audio(new URL('../assets/music/bg-music.mp3',  import.meta.url).href),
-  battle: new Audio(new URL('../assets/music/bg-music2.mp3', import.meta.url).href),
-};
+const bgmSingleAudio = new Audio(new URL('../assets/music/bg-music2.mp3', import.meta.url).href);
+bgmSingleAudio.loop = true;
+bgmSingleAudio.volume = bgmVolume;
 
-Object.values(bgmAssets).forEach(a => {
-  a.loop = true;
-  a.volume = bgmVolume;
-});
+const bgmAssets = {
+  menu:   bgmSingleAudio,
+  battle: bgmSingleAudio,
+};
 
 export const playBgm = (type) => {
   try {

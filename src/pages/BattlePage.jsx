@@ -111,6 +111,10 @@ const BattlePage = () => {
 
   // Handle Ready Handshake
   useEffect(() => {
+    useMatchStore.getState().queryReadyStatus();
+  }, []);
+
+  useEffect(() => {
     if (localReady && opponentReady && battlePhase === 'waiting') {
       setBattlePhase('countdown');
     }

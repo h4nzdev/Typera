@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Volume2, VolumeX, playBgm, toggleMuteBgm } from '../../lib/sounds';
+import { Volume2, VolumeX } from 'lucide-react';
+import { playBgm, toggleMuteBgm } from '../../lib/sounds';
 
 const BackgroundMusic = () => {
   const location = useLocation();

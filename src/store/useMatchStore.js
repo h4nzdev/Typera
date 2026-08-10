@@ -142,15 +142,33 @@ const useMatchStore = create((set, get) => ({
     if (channel) {
       const { playerName } = (await import('../store/useUserStore')).default.getState();
       
-      // 1. Presence update (for late arrivers)
-      await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: roundNumber });
+      // 1. Presence update
+      await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: roundNumber, isReady: true });
       
-      // 2. Immediate Broadcast fallback (for instant zero-latency delivery to opponent)
+      // 2. Broadcast player_ready
       channel.send({
         type: 'broadcast',
         event: 'player_ready',
-        payload: { id: myId, readyRound: roundNumber }
+        payload: { id: myId, readyRound: roundNumber, isReady: true }
       });
+    }
+  },
+
+  queryReadyStatus: () => {
+    const { channel, myId, roundNumber, localReady } = get();
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'query_ready',
+        payload: { id: myId, roundNumber }
+      });
+      if (localReady) {
+        channel.send({
+          type: 'broadcast',
+          event: 'player_ready',
+          payload: { id: myId, readyRound: roundNumber, isReady: true }
+        });
+      }
     }
   },
 
@@ -159,7 +177,7 @@ const useMatchStore = create((set, get) => ({
     const { channel, isHost } = get();
     if (channel) {
       const { playerName } = (await import('../store/useUserStore')).default.getState();
-      await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0 });
+      await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
     }
   },
 
@@ -253,21 +271,32 @@ const useMatchStore = create((set, get) => ({
           const me = connectedPlayers.find(p => p.id === myId);
           const opponent = connectedPlayers.find(p => p.id !== myId);
 
-          const isMeReady = me?.readyRound === currentRound;
-          const isOppReady = opponent?.readyRound === currentRound;
+          const isMeReady = me?.isReady || me?.readyRound === currentRound;
+          const isOppReady = opponent?.isReady || opponent?.readyRound === currentRound;
 
           set((state) => ({ 
-            localReady: state.localReady || isMeReady, 
-            opponentReady: state.opponentReady || isOppReady 
+            localReady: state.localReady || Boolean(isMeReady), 
+            opponentReady: state.opponentReady || Boolean(isOppReady) 
           }));
+        }
+      })
+      .on('broadcast', { event: 'query_ready' }, (payload) => {
+        const { myId, roundNumber, localReady, channel } = get();
+        if (payload.payload.id !== myId && localReady && channel) {
+          channel.send({
+            type: 'broadcast',
+            event: 'player_ready',
+            payload: { id: myId, readyRound: roundNumber, isReady: true }
+          });
         }
       })
       .on('broadcast', { event: 'player_ready' }, (payload) => {
         const myId = get().myId;
         const currentRound = get().roundNumber || 1;
-        // Immediate broadcast handler for ready status
-        if (payload.payload.id !== myId && payload.payload.readyRound === currentRound) {
-          set({ opponentReady: true });
+        if (payload.payload.id !== myId) {
+          if (payload.payload.readyRound === currentRound || payload.payload.isReady) {
+            set({ opponentReady: true });
+          }
         }
       })
       .on('broadcast', { event: 'match_setup' }, (payload) => {
@@ -318,7 +347,7 @@ const useMatchStore = create((set, get) => ({
         set({ channelState: status });
         if (status === 'SUBSCRIBED') {
           const { playerName } = (await import('../store/useUserStore')).default.getState();
-          await newChannel.track({ isHost, joinedAt: Date.now(), playerName: playerName || 'PLAYER', readyRound: 0 });
+          await newChannel.track({ isHost, joinedAt: Date.now(), playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
         }
       });
   },
@@ -343,7 +372,7 @@ const useMatchStore = create((set, get) => ({
     if (channel) {
       const resetPresence = async () => {
         const { playerName } = (await import('../store/useUserStore')).default.getState();
-        await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0 });
+        await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
       };
       resetPresence();
     }
@@ -371,7 +400,7 @@ const useMatchStore = create((set, get) => ({
     if (channel) {
       const resetPresence = async () => {
         const { playerName } = (await import('../store/useUserStore')).default.getState();
-        await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0 });
+        await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
       };
       resetPresence();
     }
