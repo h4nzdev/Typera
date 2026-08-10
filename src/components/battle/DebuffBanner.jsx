@@ -25,6 +25,12 @@ const DEBUFF_CONFIG = {
     glow: 'rgba(255,251,0,0.85)',
     image: glitchBanner,
   },
+  freeze: {
+    label: 'FROZEN!',
+    color: '#00f3ff',
+    glow: 'rgba(0,243,255,0.85)',
+    image: glitchBanner,
+  },
 };
 
 // Banner shown on YOUR screen when YOU receive a debuff

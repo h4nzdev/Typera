@@ -256,7 +256,7 @@ const BattlePage = () => {
       return;
     }
 
-    if (activeDebuff?.type === 'glitch') {
+    if (activeDebuff?.type === 'glitch' || activeDebuff?.type === 'freeze') {
       playSound('error');
       triggerShake();
       return;
@@ -324,7 +324,7 @@ const BattlePage = () => {
         
         // Power-Up Generation
         if (newCombo > 0 && newCombo % 20 === 0 && !heldPowerUp) {
-          const types = ['glitch', 'blind', 'steal'];
+          const types = ['glitch', 'blind', 'steal', 'freeze'];
           setHeldPowerUp(types[Math.floor(Math.random() * types.length)]);
           playSound('start'); // Notify player!
         }
@@ -667,20 +667,42 @@ const BattlePage = () => {
               </div>
             )}
 
-            {/* ── HIGH-VOLTAGE STEAL OVERLAY ── */}
+            {/* ── HIGH-VOLTAGE CYBER-SIPHON STEAL OVERLAY ── */}
             {activeDebuff?.type === 'steal' && (
-              <div className="absolute inset-0 z-50 pointer-events-none rounded-xl border-4 border-[var(--color-neon-red)] flex flex-col items-center justify-center gap-3 animate-electric-siphon p-6 bg-red-950/40 backdrop-blur-sm">
-                <span className="text-6xl animate-bounce filter drop-shadow-[0_0_20px_#ff003c]">⚡</span>
-                <span className="font-[family-name:var(--font-arcade)] text-2xl text-[var(--color-neon-red)] tracking-[0.3em] text-center text-glow-red animate-pulse">
-                  PROGRESS STOLEN!
+              <div className="absolute -inset-4 z-50 pointer-events-none rounded-2xl border-4 border-[var(--color-neon-red)] flex flex-col items-center justify-center gap-3 animate-electric-siphon p-6 bg-red-950/60 backdrop-blur-md overflow-hidden">
+                {/* 1. Sweeping Energy Laser Scanline */}
+                <div className="absolute inset-y-0 w-[200%] bg-gradient-to-r from-transparent via-red-500/40 to-yellow-400/50 pointer-events-none animate-steal-laser" />
+                
+                {/* 2. Rotating Siphon Vortex */}
+                <div className="w-24 h-24 rounded-full border-4 border-dashed border-red-500 flex items-center justify-center animate-siphon-vortex bg-black/50">
+                  <span className="text-5xl filter drop-shadow-[0_0_25px_#ff003c]">⚡</span>
+                </div>
+
+                <span className="font-[family-name:var(--font-arcade)] text-3xl md:text-4xl text-[var(--color-neon-red)] tracking-[0.4em] text-center text-glow-red animate-pulse z-10">
+                  CYBER-SIPHON DETECTED!
                 </span>
-                <span className="font-[family-name:var(--font-arcade)] text-xs text-yellow-300 tracking-widest uppercase bg-black/80 px-4 py-1 border border-red-500">
-                  ⚡ OPPONENT SIPHONED YOUR TYPING PROGRESS ⚡
+                <span className="font-[family-name:var(--font-arcade)] text-xs md:text-sm text-yellow-300 tracking-widest uppercase bg-black/90 px-6 py-1.5 border-2 border-red-500 z-10 shadow-[0_0_15px_rgba(255,0,60,0.8)]">
+                  ⚡ OPPONENT SIPHONED 15 CHARACTERS FROM YOUR TYPING PROGRESS ⚡
                 </span>
               </div>
             )}
 
-            <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-2xl opacity-5 scale-95 pointer-events-none select-none' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-cyber-glitch scale-[1.02]' : ''} ${activeDebuff?.type === 'steal' ? 'animate-shake border-red-500' : ''}`}>
+            {/* ── SUB-ZERO ICE LOCK FREEZE OVERLAY ── */}
+            {activeDebuff?.type === 'freeze' && (
+              <div className="absolute -inset-4 z-50 pointer-events-none rounded-2xl border-4 border-cyan-400 flex flex-col items-center justify-center gap-3 animate-ice-freeze p-6 bg-cyan-950/80 backdrop-blur-xl overflow-hidden shadow-[0_0_60px_rgba(0,243,255,0.8)]">
+                {/* Ice Cracks Overlay */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,243,255,0.2)_0%,transparent_70%)] pointer-events-none" />
+                <span className="text-7xl animate-pulse filter drop-shadow-[0_0_30px_#00f3ff]">❄</span>
+                <span className="font-[family-name:var(--font-arcade)] text-3xl md:text-5xl text-[var(--color-neon-cyan)] tracking-[0.4em] text-center text-glow-cyan animate-pulse">
+                  SYSTEM FROZEN!
+                </span>
+                <span className="font-[family-name:var(--font-arcade)] text-xs md:text-sm text-white tracking-widest uppercase bg-black/90 px-6 py-1.5 border-2 border-cyan-400 shadow-[0_0_20px_rgba(0,243,255,0.5)]">
+                  ❄ SUB-ZERO ICE LOCK // KEYBOARD IS FROZEN FOR 2.5S ❄
+                </span>
+              </div>
+            )}
+
+            <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-2xl opacity-5 scale-95 pointer-events-none select-none' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-cyber-glitch scale-[1.02]' : ''} ${activeDebuff?.type === 'steal' ? 'animate-shake border-red-500' : ''} ${activeDebuff?.type === 'freeze' ? 'blur-sm scale-[0.98] grayscale pointer-events-none' : ''}`}>
               <TypingText text={challengeText} words={challengeWords} typed={typed} />
             </div>
           </div>
