@@ -191,12 +191,15 @@ const BattlePage = () => {
   useEffect(() => {
     if (battlePhase !== 'playing') return;
     
-    if (gameMode === 'race' && opponentStats.progress === 100) {
-      endGame(false, false, false);
+    if (gameMode === 'race' && opponentStats.progress >= 100) {
+      const myProgress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
+      const isDraw = myProgress >= 100;
+      setTimeout(() => endGame(!isDraw && myProgress >= 100, false, isDraw), 200);
     }
     
     if (gameMode === 'deathmatch') {
-      if (myHp <= 0) endGame(false, false, false);
+      if (myHp <= 0 && opponentHp <= 0) endGame(false, false, true);
+      else if (myHp <= 0) endGame(false, false, false);
       else if (opponentHp <= 0) endGame(true, false, false);
     }
   }, [opponentStats.progress, battlePhase, endGame, gameMode, myHp, opponentHp]);
@@ -327,7 +330,7 @@ const BattlePage = () => {
         if (newCombo > 0 && newCombo % 20 === 0 && !heldPowerUp) {
           const types = ['glitch', 'blind', 'steal', 'freeze'];
           setHeldPowerUp(types[Math.floor(Math.random() * types.length)]);
-          playSound('start'); // Notify player!
+          playVoice('powerup'); // Play powerup.mp3!
         }
       }
       setCombo(newCombo);
@@ -381,7 +384,8 @@ const BattlePage = () => {
       }
       
       if (gameMode === 'race' && next === challengeText) {
-         setTimeout(() => endGame(true, false, false), 300);
+         const isDraw = opponentStats.progress >= 100;
+         setTimeout(() => endGame(!isDraw, false, isDraw), 200);
       }
       
       if (gameMode === 'classic_booth' && next === challengeText) {

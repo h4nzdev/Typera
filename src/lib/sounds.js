@@ -46,6 +46,7 @@ const voiceAssets = {
   'glitch':   new Audio(new URL('../assets/voice/glitch.mp3',   import.meta.url).href),
   'blind':    new Audio(new URL('../assets/voice/blind.mp3',    import.meta.url).href),
   'type':     new Audio(new URL('../assets/voice/type.mp3',     import.meta.url).href),
+  'powerup':  new Audio(new URL('../assets/powerup.mp3',        import.meta.url).href),
 };
 
 Object.values(voiceAssets).forEach(a => { a.volume = 0.9; });
