@@ -81,11 +81,11 @@ const PublicTicketPage = () => {
 
           {/* Header */}
           <div className="flex flex-col items-center text-center border-b-2 border-dashed border-cyan-500/40 pb-4 pt-2">
-            <div className="flex items-center gap-2 text-[var(--color-neon-cyan)] font-[family-name:var(--font-arcade)] text-2xl tracking-widest text-glow-cyan">
+            <div className="flex flex-col items-center justify-center text-[var(--color-neon-cyan)] font-[family-name:var(--font-arcade)] text-base md:text-lg tracking-wider text-glow-cyan text-center leading-normal">
               <span>⚡ TYPE//BATTLE VIP PASS ⚡</span>
             </div>
-            <span className="text-[11px] text-white/60 tracking-widest uppercase mt-1">AUTHENTICATED BOOTH MATCH RECORD</span>
-            <span className="text-[10px] text-yellow-400 font-bold tracking-wider mt-0.5">{dateStr} | {matchCode}</span>
+            <span className="text-[11px] text-white/60 tracking-widest uppercase mt-1 leading-tight">AUTHENTICATED BOOTH MATCH RECORD</span>
+            <span className="text-[10px] text-yellow-400 font-bold tracking-wider mt-1">{dateStr} | {matchCode}</span>
           </div>
 
           {/* Match Players & Winner */}

@@ -14,12 +14,14 @@ const BoothTicketCard = ({
   wpm = 0,
   accuracy = 100,
   maxCombo = 0,
-  matchCode = 'BOOTH-1'
+  matchCode = 'BOOTH-1',
+  autoDownload = false
 }) => {
   const ticketRef = useRef(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const hasAutoDownloaded = useRef(false);
 
   const dateStr = new Date().toLocaleDateString('en-US', {
     month: 'short',
@@ -63,6 +65,15 @@ const BoothTicketCard = ({
     }
   };
 
+  useEffect(() => {
+    if (autoDownload && qrDataUrl && !hasAutoDownloaded.current) {
+      hasAutoDownloaded.current = true;
+      setTimeout(() => {
+        handleDownload();
+      }, 600);
+    }
+  }, [autoDownload, qrDataUrl]);
+
   return (
     <div className="flex flex-col items-center gap-6 my-4 w-full max-w-md mx-auto">
       {/* ── THE PRINTED TICKET CONTAINER ── */}
@@ -80,13 +91,13 @@ const BoothTicketCard = ({
           ))}
         </div>
 
-        {/* Ticket Header */}
+        {/* Ticket Header (Fixed Layout: No Wrap Overlap) */}
         <div className="flex flex-col items-center text-center border-b-2 border-dashed border-cyan-500/40 pb-4 pt-2">
-          <div className="flex items-center gap-2 text-[var(--color-neon-cyan)] font-[family-name:var(--font-arcade)] text-xl tracking-widest text-glow-cyan">
+          <div className="flex flex-col items-center justify-center text-[var(--color-neon-cyan)] font-[family-name:var(--font-arcade)] text-base md:text-lg tracking-wider text-glow-cyan text-center leading-normal">
             <span>⚡ TYPE//BATTLE VIP PASS ⚡</span>
           </div>
-          <span className="text-[10px] text-white/50 tracking-widest uppercase mt-1">OFFICIAL BOOTH COMPETITION TICKET</span>
-          <span className="text-[9px] text-yellow-400/80 font-bold tracking-wider mt-0.5">{dateStr} | {matchCode}</span>
+          <span className="text-[10px] text-white/50 tracking-widest uppercase mt-1 leading-tight">OFFICIAL BOOTH COMPETITION TICKET</span>
+          <span className="text-[9px] text-yellow-400/80 font-bold tracking-wider mt-1">{dateStr} | {matchCode}</span>
         </div>
 
         {/* Match Players & Winner Section */}
@@ -173,9 +184,6 @@ const BoothTicketCard = ({
             </>
           )}
         </ArcadeButton>
-        <span className="text-[10px] text-white/50 tracking-widest uppercase font-[family-name:var(--font-arcade)]">
-          [ SCAN QR CODE OR DOWNLOAD FOR YOUR MOBILE DEVICE ]
-        </span>
       </div>
     </div>
   );
