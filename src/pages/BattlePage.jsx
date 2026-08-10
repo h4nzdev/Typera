@@ -96,6 +96,9 @@ const BattlePage = () => {
     // If the player didn't type a single key, accuracy should be 0, not the default 100.
     const finalAccuracy = statsRef.current.totalKeystrokes === 0 ? 0 : accuracy;
     
+    const opponentPlayer = players.find(p => p.id !== myId);
+    const oppName = opponentPlayer?.playerName || 'OPPONENT';
+
     navigate('/result', {
       state: {
         isWinner,
@@ -106,7 +109,9 @@ const BattlePage = () => {
         maxCombo: maxComboRef.current,
         mode: gameMode,
         myPoints: localPoints,
-        opponentPoints
+        opponentPoints,
+        opponentName: oppName,
+        matchCode: matchCode || 'BOOTH-VIP'
       }
     });
   }, [navigate, wpm, accuracy, gameMode, localPoints, opponentPoints]);

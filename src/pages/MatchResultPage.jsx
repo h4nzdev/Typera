@@ -6,6 +6,7 @@ import ArcadeButton from '../components/arcade/ArcadeButton';
 import { supabase } from '../lib/supabase';
 import useMatchStore from '../store/useMatchStore';
 import useUserStore from '../store/useUserStore';
+import BoothTicketCard from '../components/battle/BoothTicketCard';
 
 const MatchResultPage = () => {
   const navigate = useNavigate();
@@ -182,6 +183,22 @@ const MatchResultPage = () => {
           <div className="stat-card"><ArcadeText color={isWinner && !isDraw ? 'green' : 'white'} glow className="text-3xl">{accuracy}% ACCURACY</ArcadeText></div>
           <div className="stat-card"><ArcadeText color="yellow" glow className="text-3xl">MAX COMBO ×{maxCombo}</ArcadeText></div>
         </div>
+
+        {/* ── VIP BOOTH TICKET & SCAN QR CODE ── */}
+        {isMatchOver && matchData.mode !== 'solo' && (
+          <BoothTicketCard
+            playerName={playerName || 'PLAYER 1'}
+            opponentName={matchData.opponentName || 'OPPONENT'}
+            winnerName={isDraw ? 'DRAW' : (isWinner ? (playerName || 'PLAYER 1') : (matchData.opponentName || 'OPPONENT'))}
+            isDraw={isDraw}
+            myPoints={myPoints}
+            opponentPoints={opponentPoints}
+            wpm={wpm}
+            accuracy={accuracy}
+            maxCombo={maxCombo}
+            matchCode={matchData.matchCode || 'BOOTH-VIP'}
+          />
+        )}
 
         <div className="flex flex-col items-stretch max-w-fit mx-auto mt-2">
           {/* SAVE TO LEADERBOARD: only for non-booth, or final booth victory */}

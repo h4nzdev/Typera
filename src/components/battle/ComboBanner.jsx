@@ -1,20 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { playVoice } from '../../lib/sounds';
 import comboBannerImg from '../../assets/banner/combo.png';
 
 const ComboBanner = ({ triggerCombo }) => {
   const panelRef = useRef(null);
   const [mounted, setMounted] = useState(false);
-  const hideTimerRef = useRef(null);
 
   useEffect(() => {
     if (!triggerCombo) return;
 
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-
     setMounted(true);
-    playVoice('combo'); // Trigger combo.mp3!
 
     requestAnimationFrame(() => {
       const el = panelRef.current;
@@ -22,39 +17,24 @@ const ComboBanner = ({ triggerCombo }) => {
 
       gsap.killTweensOf(el);
 
-      // Animate IN: slide down + scale up + slight bounce
-      gsap.fromTo(
+      // GSAP Timeline: Slide IN (0.4s) -> Hold (2.0s) -> Slide OUT (0.35s) -> Unmount
+      const tl = gsap.timeline({
+        onComplete: () => {
+          setMounted(false);
+        }
+      });
+
+      tl.fromTo(
         el,
         { yPercent: -140, opacity: 0, scale: 0.7, rotation: -4 },
-        {
-          yPercent: 0,
-          opacity: 1,
-          scale: 1.05,
-          rotation: 0,
-          duration: 0.4,
-          ease: 'back.out(2)',
-          onComplete: () => {
-            // Hold for 2 seconds then animate OUT
-            hideTimerRef.current = setTimeout(() => {
-              gsap.to(el, {
-                yPercent: -140,
-                opacity: 0,
-                scale: 0.8,
-                duration: 0.35,
-                ease: 'power3.in',
-                onComplete: () => {
-                  setMounted(false);
-                },
-              });
-            }, 2000);
-          },
-        }
+        { yPercent: 0, opacity: 1, scale: 1.05, rotation: 0, duration: 0.4, ease: 'back.out(2)' }
+      )
+      .to(el, { duration: 2.0 })
+      .to(
+        el,
+        { yPercent: -140, opacity: 0, scale: 0.8, duration: 0.35, ease: 'power3.in' }
       );
     });
-
-    return () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
   }, [triggerCombo]);
 
   if (!mounted) return null;

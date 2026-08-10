@@ -40,68 +40,44 @@ const DebuffBanner = ({ activeDebuff }) => {
   const [cfg, setCfg] = useState(null);
   const [mounted, setMounted] = useState(false);
   const prevType = useRef(null);
-  const hideTimerRef = useRef(null);
 
   useEffect(() => {
-    if (!activeDebuff) {
-      prevType.current = null;
-      return;
-    }
+    if (!activeDebuff) return;
     if (activeDebuff.type === prevType.current) return;
     prevType.current = activeDebuff.type;
 
     const newCfg = DEBUFF_CONFIG[activeDebuff.type];
     if (!newCfg) return;
 
-    // Clear any existing hide timer
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-
     setCfg(newCfg);
     setMounted(true);
 
-    // Play the voice line immediately when the debuff hits
-    playVoice(activeDebuff.type);
-
-    // Wait one frame for the DOM to render, then animate in
     requestAnimationFrame(() => {
       const el = panelRef.current;
       if (!el) return;
 
       gsap.killTweensOf(el);
 
-      // Animate IN: slide down + scale up + fade in
-      gsap.fromTo(
+      // GSAP Timeline: Slide IN (0.35s) -> Hold (2.0s) -> Slide OUT (0.35s) -> Unmount
+      const tl = gsap.timeline({
+        onComplete: () => {
+          setMounted(false);
+          setCfg(null);
+          prevType.current = null;
+        }
+      });
+
+      tl.fromTo(
         el,
         { yPercent: -140, opacity: 0, scale: 0.8 },
-        {
-          yPercent: 0,
-          opacity: 1,
-          scale: 1,
-          duration: 0.35,
-          ease: 'back.out(1.7)',
-          onComplete: () => {
-            // After 2 seconds visible, animate OUT
-            hideTimerRef.current = setTimeout(() => {
-              gsap.to(el, {
-                yPercent: -140,
-                opacity: 0,
-                scale: 0.8,
-                duration: 0.35,
-                ease: 'power3.in',
-                onComplete: () => {
-                  setMounted(false);
-                  prevType.current = null;
-                },
-              });
-            }, 2000);
-          },
-        }
+        { yPercent: 0, opacity: 1, scale: 1, duration: 0.35, ease: 'back.out(1.7)' }
+      )
+      .to(el, { duration: 2.0 })
+      .to(
+        el,
+        { yPercent: -140, opacity: 0, scale: 0.8, duration: 0.35, ease: 'power3.in' }
       );
     });
-
-    return () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
   }, [activeDebuff]);
 
   if (!mounted || !cfg) return null;

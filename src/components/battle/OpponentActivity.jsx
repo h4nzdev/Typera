@@ -68,56 +68,38 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
 
   // Animate the debuff banner when a new debuff arrives
   useEffect(() => {
-    if (!debuff) {
-      prevDebuffType.current = null;
-      return;
-    }
+    if (!debuff) return;
     if (debuff.type === prevDebuffType.current) return;
     prevDebuffType.current = debuff.type;
 
     const cfg = DEBUFF_CONFIG[debuff.type];
     if (!cfg) return;
 
-    // Clear any existing hide timer
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-
     setActiveCfg(cfg);
 
-    // Wait one frame for DOM, then animate IN
     requestAnimationFrame(() => {
       const el = bannerRef.current;
       if (!el) return;
       gsap.killTweensOf(el);
-      gsap.fromTo(
+
+      const tl = gsap.timeline({
+        onComplete: () => {
+          setActiveCfg(null);
+          prevDebuffType.current = null;
+        }
+      });
+
+      tl.fromTo(
         el,
         { yPercent: -110, opacity: 0, scaleX: 0.85 },
-        {
-          yPercent: 0, opacity: 1, scaleX: 1,
-          duration: 0.35,
-          ease: 'back.out(1.8)',
-          onComplete: () => {
-            // Hold 2 seconds then animate OUT
-            hideTimerRef.current = setTimeout(() => {
-              gsap.to(el, {
-                yPercent: -115,
-                opacity: 0,
-                scaleX: 0.85,
-                duration: 0.4,
-                ease: 'power3.in',
-                onComplete: () => {
-                  setActiveCfg(null);
-                  prevDebuffType.current = null;
-                },
-              });
-            }, 2000);
-          },
-        }
+        { yPercent: 0, opacity: 1, scaleX: 1, duration: 0.35, ease: 'back.out(1.8)' }
+      )
+      .to(el, { duration: 2.0 })
+      .to(
+        el,
+        { yPercent: -115, opacity: 0, scaleX: 0.85, duration: 0.4, ease: 'power3.in' }
       );
     });
-
-    return () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
   }, [debuff]);
 
   const isSteal  = debuff?.type === 'steal';
