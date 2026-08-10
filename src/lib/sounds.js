@@ -45,6 +45,7 @@ const voiceAssets = {
   'steal':    new Audio(new URL('../assets/voice/steal.mp3',    import.meta.url).href),
   'glitch':   new Audio(new URL('../assets/voice/glitch.mp3',   import.meta.url).href),
   'blind':    new Audio(new URL('../assets/voice/blind.mp3',    import.meta.url).href),
+  'type':     new Audio(new URL('../assets/voice/type.mp3',     import.meta.url).href),
 };
 
 Object.values(voiceAssets).forEach(a => { a.volume = 0.9; });
@@ -54,7 +55,14 @@ export const playVoice = (name) => {
     const audio = voiceAssets[name];
     if (!audio) return;
     audio.currentTime = 0;
-    audio.play().catch(() => {});
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        const clone = audio.cloneNode(true);
+        clone.volume = audio.volume;
+        clone.play().catch(() => {});
+      });
+    }
   } catch (err) {
     // Non-fatal
   }

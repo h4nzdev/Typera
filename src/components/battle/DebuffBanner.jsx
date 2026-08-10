@@ -42,7 +42,11 @@ const DebuffBanner = ({ activeDebuff }) => {
   const hideTimerRef = useRef(null);
 
   useEffect(() => {
-    if (!activeDebuff || activeDebuff.type === prevType.current) return;
+    if (!activeDebuff) {
+      prevType.current = null;
+      return;
+    }
+    if (activeDebuff.type === prevType.current) return;
     prevType.current = activeDebuff.type;
 
     const newCfg = DEBUFF_CONFIG[activeDebuff.type];

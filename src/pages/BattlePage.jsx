@@ -173,7 +173,8 @@ const BattlePage = () => {
           playSound('hover'); // tick
         } else if (count === 0) {
           setCountdown('TYPE!');
-          playSound('start'); // high pitch go
+          playSound('start');
+          playVoice('type');
         } else {
           clearInterval(countInterval);
           setBattlePhase('playing');
