@@ -10,6 +10,7 @@ import ArcadeText from '../components/arcade/ArcadeText';
 import ArcadeButton from '../components/arcade/ArcadeButton';
 import PowerUpSlot from '../components/battle/PowerUpSlot';
 import DebuffBanner from '../components/battle/DebuffBanner';
+import ComboBanner from '../components/battle/ComboBanner';
 import { useNavigate } from 'react-router-dom';
 import useMatchStore from '../store/useMatchStore';
 import { playSound, playVoice, playBgm } from '../lib/sounds';
@@ -66,6 +67,7 @@ const BattlePage = () => {
   
   const [battlePhase, setBattlePhase] = useState('waiting'); // waiting, countdown, playing
   const [countdown, setCountdown] = useState(null);
+  const [triggerCombo50, setTriggerCombo50] = useState(0);
 
   const statsRef = useRef({ totalKeystrokes: 0, errors: 0, wordErrors: 0 });
   const maxComboRef = useRef(0);
@@ -326,6 +328,11 @@ const BattlePage = () => {
         maxComboRef.current = Math.max(maxComboRef.current, newCombo);
         if (newCombo > 0 && newCombo % 10 === 0) playSound('combo');
         
+        // 50x Combo Banner & Voice Trigger!
+        if (newCombo > 0 && newCombo % 50 === 0) {
+          setTriggerCombo50(Date.now());
+        }
+
         // Power-Up Generation
         if (newCombo > 0 && newCombo % 20 === 0 && !heldPowerUp) {
           const types = ['glitch', 'blind', 'steal', 'freeze'];
@@ -584,7 +591,8 @@ const BattlePage = () => {
         </div>
       )}
 
-
+      <DebuffBanner activeDebuff={activeDebuff} />
+      <ComboBanner triggerCombo={triggerCombo50} />
 
       <div className="w-full mx-auto flex flex-col z-10 h-full flex-grow justify-between max-w-[1800px]">
         {/* Top Section */}
