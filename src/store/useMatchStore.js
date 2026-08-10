@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import typingData from '../data/type_battle_word_data.json';
+import { playVoice } from '../lib/sounds';
 
 const generateChallenge = (count = 15, category = 'all', mode = 'race') => {
   const words = [];
@@ -322,6 +323,7 @@ const useMatchStore = create((set, get) => ({
         const type = payload.payload.type;
         const duration = type === 'blind' ? 3000 : 2000;
         set({ activeDebuff: { type, endsAt: Date.now() + duration } });
+        playVoice(type);
         setTimeout(() => {
           if (get().activeDebuff?.type === type) {
             set({ activeDebuff: null });

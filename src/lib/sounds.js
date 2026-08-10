@@ -39,33 +39,27 @@ const playSynth = (type, freq1, freq2, duration, vol = 0.1) => {
 };
 
 // ─── Voice / MP3 asset pool ──────────────────────────────────────────────────
-const voiceAssets = {
-  'you-win':  new Audio(new URL('../assets/voice/you-win.mp3',  import.meta.url).href),
-  'you-lose': new Audio(new URL('../assets/voice/you-lose.mp3', import.meta.url).href),
-  'steal':    new Audio(new URL('../assets/voice/steal.mp3',    import.meta.url).href),
-  'glitch':   new Audio(new URL('../assets/voice/glitch.mp3',   import.meta.url).href),
-  'blind':    new Audio(new URL('../assets/voice/blind.mp3',    import.meta.url).href),
-  'type':     new Audio(new URL('../assets/voice/type.mp3',     import.meta.url).href),
-  'powerup':  new Audio(new URL('../assets/powerup.mp3',        import.meta.url).href),
-  'combo':    new Audio(new URL('../assets/voice/combo.mp3',    import.meta.url).href),
-  'freeze':   new Audio(new URL('../assets/voice/freeze.mp3',   import.meta.url).href),
+const voiceUrls = {
+  'you-win':  new URL('../assets/voice/you-win.mp3',  import.meta.url).href,
+  'you-lose': new URL('../assets/voice/you-lose.mp3', import.meta.url).href,
+  'steal':    new URL('../assets/voice/steal.mp3',    import.meta.url).href,
+  'glitch':   new URL('../assets/voice/glitch.mp3',   import.meta.url).href,
+  'blind':    new URL('../assets/voice/blind.mp3',    import.meta.url).href,
+  'type':     new URL('../assets/voice/type.mp3',     import.meta.url).href,
+  'powerup':  new URL('../assets/powerup.mp3',        import.meta.url).href,
+  'combo':    new URL('../assets/voice/combo.mp3',    import.meta.url).href,
+  'freeze':   new URL('../assets/voice/freeze.mp3',   import.meta.url).href,
 };
-
-Object.values(voiceAssets).forEach(a => { a.volume = 0.9; });
 
 export const playVoice = (name) => {
   try {
-    const audio = voiceAssets[name];
-    if (!audio) return;
-    audio.currentTime = 0;
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {
-        const clone = audio.cloneNode(true);
-        clone.volume = audio.volume;
-        clone.play().catch(() => {});
-      });
-    }
+    const url = voiceUrls[name];
+    if (!url) return;
+    const sound = new Audio(url);
+    sound.volume = 0.9;
+    sound.play().catch((err) => {
+      console.warn(`Voice sound [${name}] playback failed:`, err);
+    });
   } catch (err) {
     // Non-fatal
   }
