@@ -388,7 +388,16 @@ const BattlePage = () => {
       }
       const newProgress = Math.min(100, Math.round((correctCount / challengeText.length) * 100)) || 0;
       
-      broadcastStats({ progress: newProgress, wpm: newWpm, accuracy: newAcc, combo: newCombo, damageDealt: newDamage });
+      broadcastStats({ 
+        progress: newProgress, 
+        wpm: newWpm, 
+        accuracy: newAcc, 
+        combo: newCombo, 
+        damageDealt: newDamage,
+        typed: next,
+        lastKey: e.key,
+        activeDebuff
+      });
       
       // Infinite append for deathmatch
       if (gameMode === 'deathmatch' && next.length > challengeText.length - 100) {

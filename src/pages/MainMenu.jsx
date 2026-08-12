@@ -24,6 +24,7 @@ const MENU_ITEMS = [
   { id: 'booth',    label: 'CLASSIC 1V1',   sub: 'BOOTH MODE',       color: '#fffb00',  glow: 'rgba(255,251,0,0.6)',   key: 'yellow' },
   { id: 'create',   label: 'CREATE MATCH',  sub: 'ONLINE BATTLE',    color: '#00f3ff',  glow: 'rgba(0,243,255,0.6)',   key: 'cyan'   },
   { id: 'join',     label: 'JOIN MATCH',    sub: 'ENTER CODE',       color: '#ff007f',  glow: 'rgba(255,0,127,0.6)',   key: 'pink'   },
+  { id: 'spectate', label: 'SPECTATE BATTLE',sub: 'LIVE TOURNAMENT', color: '#ff003c',  glow: 'rgba(255,0,60,0.6)',    key: 'red'    },
   { id: 'practice', label: 'SOLO PRACTICE', sub: 'TRAIN YOUR SPEED', color: '#39ff14',  glow: 'rgba(57,255,20,0.6)',   key: 'green'  },
   { id: 'board',    label: 'LEADERBOARD',   sub: 'HALL OF FAME',     color: '#b026ff',  glow: 'rgba(176,38,255,0.6)',  key: 'purple' },
 ];
@@ -112,6 +113,7 @@ const MainMenu = () => {
       else navigate('/create');
     }
     else if (id === 'join') navigate('/join');
+    else if (id === 'spectate') navigate('/spectate');
     else if (id === 'practice') navigate('/practice');
     else if (id === 'board') navigate('/leaderboard');
   };

@@ -29,7 +29,14 @@ const PublicTicketPage = () => {
     if (!ticketRef.current || isDownloading) return;
     setIsDownloading(true);
     try {
-      const dataUrl = await toPng(ticketRef.current, { quality: 0.95, cacheBust: true });
+      if (document.fonts) {
+        await document.fonts.ready;
+      }
+      const dataUrl = await toPng(ticketRef.current, { 
+        quality: 0.95, 
+        cacheBust: true,
+        pixelRatio: 2
+      });
       const link = document.createElement('a');
       link.download = `type-battle-ticket-${playerName.toLowerCase().replace(/\s+/g, '-')}.png`;
       link.href = dataUrl;
@@ -79,31 +86,31 @@ const PublicTicketPage = () => {
             ))}
           </div>
 
-          {/* Header */}
-          <div className="flex flex-col items-center text-center border-b-2 border-dashed border-cyan-500/40 pb-4 pt-2">
-            <div className="flex flex-col items-center justify-center text-[var(--color-neon-cyan)] font-[family-name:var(--font-arcade)] text-base md:text-lg tracking-wider text-glow-cyan text-center leading-normal">
-              <span>⚡ TYPE//BATTLE VIP PASS ⚡</span>
+          {/* Header (Guaranteed No-Wrap Single Line Layout) */}
+          <div className="flex flex-col items-center text-center border-b-2 border-dashed border-cyan-500/40 pb-4 pt-3 gap-1.5">
+            <div className="flex items-center justify-center text-[var(--color-neon-cyan)] font-[family-name:var(--font-arcade)] text-base sm:text-lg tracking-normal text-glow-cyan text-center whitespace-nowrap overflow-hidden">
+              <span className="whitespace-nowrap inline-block">⚡ TYPE//BATTLE VIP PASS ⚡</span>
             </div>
-            <span className="text-[11px] text-white/60 tracking-widest uppercase mt-1 leading-tight">AUTHENTICATED BOOTH MATCH RECORD</span>
-            <span className="text-[10px] text-yellow-400 font-bold tracking-wider mt-1">{dateStr} | {matchCode}</span>
+            <span className="text-[11px] text-white/60 tracking-widest uppercase leading-tight whitespace-nowrap block mt-0.5">AUTHENTICATED BOOTH MATCH RECORD</span>
+            <span className="text-[10px] text-yellow-400 font-bold tracking-wider whitespace-nowrap block">{dateStr} | {matchCode}</span>
           </div>
 
           {/* Match Players & Winner */}
           <div className="my-5 flex flex-col items-center gap-3 border-b-2 border-dashed border-cyan-500/40 pb-5">
             <div className="flex items-center justify-between w-full px-2 text-base font-bold">
-              <span className="text-cyan-400 truncate max-w-[130px]">{playerName}</span>
-              <span className="text-yellow-400 text-xs italic">VS</span>
-              <span className="text-pink-400 truncate max-w-[130px] text-right">{opponentName}</span>
+              <span className="text-cyan-400 truncate max-w-[130px] whitespace-nowrap">{playerName}</span>
+              <span className="text-yellow-400 text-xs italic whitespace-nowrap">VS</span>
+              <span className="text-pink-400 truncate max-w-[130px] text-right whitespace-nowrap">{opponentName}</span>
             </div>
 
             <div className="bg-black/90 border-2 border-yellow-400 rounded-xl px-8 py-3 flex flex-col items-center shadow-[0_0_20px_rgba(255,251,0,0.25)] my-1 w-full">
-              <span className="text-xs text-yellow-400 font-bold tracking-widest uppercase flex items-center gap-1">
+              <span className="text-xs text-yellow-400 font-bold tracking-widest uppercase flex items-center gap-1 whitespace-nowrap">
                 <Trophy size={14} /> {isDraw ? 'MATCH RESULT' : 'BOOTH CHAMPION'}
               </span>
-              <span className="text-3xl font-black tracking-widest text-white text-glow-green uppercase mt-1">
+              <span className="text-3xl font-black tracking-widest text-white text-glow-green uppercase mt-1 whitespace-nowrap">
                 {isDraw ? 'DRAW (TIE)' : winnerName}
               </span>
-              <span className="text-base font-extrabold text-yellow-300 tracking-wider mt-1">
+              <span className="text-base font-extrabold text-yellow-300 tracking-wider mt-1 whitespace-nowrap">
                 SCORE: {scoreStr}
               </span>
             </div>
@@ -112,23 +119,23 @@ const PublicTicketPage = () => {
           {/* Performance Breakdown */}
           <div className="grid grid-cols-3 gap-2 text-center border-b-2 border-dashed border-cyan-500/40 pb-5">
             <div className="bg-white/5 border border-white/10 rounded-lg p-2.5 flex flex-col items-center">
-              <span className="text-[10px] text-white/50 tracking-widest uppercase">SPEED</span>
-              <span className="text-xl font-extrabold text-green-400">{wpm} <span className="text-[10px]">WPM</span></span>
+              <span className="text-[10px] text-white/50 tracking-widest uppercase whitespace-nowrap">SPEED</span>
+              <span className="text-xl font-extrabold text-green-400 whitespace-nowrap">{wpm} <span className="text-[10px]">WPM</span></span>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-lg p-2.5 flex flex-col items-center">
-              <span className="text-[10px] text-white/50 tracking-widest uppercase">ACCURACY</span>
-              <span className="text-xl font-extrabold text-cyan-400">{accuracy}%</span>
+              <span className="text-[10px] text-white/50 tracking-widest uppercase whitespace-nowrap">ACCURACY</span>
+              <span className="text-xl font-extrabold text-cyan-400 whitespace-nowrap">{accuracy}%</span>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-lg p-2.5 flex flex-col items-center">
-              <span className="text-[10px] text-white/50 tracking-widest uppercase">COMBO</span>
-              <span className="text-xl font-extrabold text-yellow-400">×{maxCombo}</span>
+              <span className="text-[10px] text-white/50 tracking-widest uppercase whitespace-nowrap">COMBO</span>
+              <span className="text-xl font-extrabold text-yellow-400 whitespace-nowrap">×{maxCombo}</span>
             </div>
           </div>
 
           {/* Barcode */}
           <div className="mt-5 flex flex-col items-center gap-1">
             <div className="h-8 w-full bg-[repeating-linear-gradient(90deg,#fff,#fff_2px,#000_2px,#000_6px)] opacity-70 rounded" />
-            <span className="text-[9px] text-white/40 tracking-[0.5em] font-mono mt-1">VERIFIED ARCHIVAL RECEIPT</span>
+            <span className="text-[9px] text-white/40 tracking-[0.5em] font-mono whitespace-nowrap">VERIFIED ARCHIVAL RECEIPT</span>
           </div>
         </div>
 

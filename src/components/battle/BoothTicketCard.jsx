@@ -51,7 +51,14 @@ const BoothTicketCard = ({
     if (!ticketRef.current || isDownloading) return;
     setIsDownloading(true);
     try {
-      const dataUrl = await toPng(ticketRef.current, { quality: 0.95, cacheBust: true });
+      if (document.fonts) {
+        await document.fonts.ready;
+      }
+      const dataUrl = await toPng(ticketRef.current, { 
+        quality: 0.95, 
+        cacheBust: true,
+        pixelRatio: 2 
+      });
       const link = document.createElement('a');
       link.download = `type-battle-ticket-${playerName.toLowerCase().replace(/\s+/g, '-')}.png`;
       link.href = dataUrl;
@@ -70,7 +77,7 @@ const BoothTicketCard = ({
       hasAutoDownloaded.current = true;
       setTimeout(() => {
         handleDownload();
-      }, 600);
+      }, 700);
     }
   }, [autoDownload, qrDataUrl]);
 
@@ -91,31 +98,31 @@ const BoothTicketCard = ({
           ))}
         </div>
 
-        {/* Ticket Header (Fixed Layout: No Wrap Overlap) */}
-        <div className="flex flex-col items-center text-center border-b-2 border-dashed border-cyan-500/40 pb-4 pt-2">
-          <div className="flex flex-col items-center justify-center text-[var(--color-neon-cyan)] font-[family-name:var(--font-arcade)] text-base md:text-lg tracking-wider text-glow-cyan text-center leading-normal">
-            <span>⚡ TYPE//BATTLE VIP PASS ⚡</span>
+        {/* Ticket Header (Guaranteed No-Wrap Single Line Layout) */}
+        <div className="flex flex-col items-center text-center border-b-2 border-dashed border-cyan-500/40 pb-4 pt-3 gap-1.5">
+          <div className="flex items-center justify-center text-[var(--color-neon-cyan)] font-[family-name:var(--font-arcade)] text-base sm:text-lg tracking-normal text-glow-cyan text-center whitespace-nowrap overflow-hidden">
+            <span className="whitespace-nowrap inline-block">⚡ TYPE//BATTLE VIP PASS ⚡</span>
           </div>
-          <span className="text-[10px] text-white/50 tracking-widest uppercase mt-1 leading-tight">OFFICIAL BOOTH COMPETITION TICKET</span>
-          <span className="text-[9px] text-yellow-400/80 font-bold tracking-wider mt-1">{dateStr} | {matchCode}</span>
+          <span className="text-[10px] text-white/60 tracking-widest uppercase leading-tight whitespace-nowrap block mt-0.5">OFFICIAL BOOTH COMPETITION TICKET</span>
+          <span className="text-[9px] text-yellow-400/80 font-bold tracking-wider whitespace-nowrap block">{dateStr} | {matchCode}</span>
         </div>
 
         {/* Match Players & Winner Section */}
         <div className="my-4 flex flex-col items-center gap-2 border-b-2 border-dashed border-cyan-500/40 pb-4">
           <div className="flex items-center justify-between w-full px-2 text-sm font-bold">
-            <span className="text-cyan-400 truncate max-w-[120px]">{playerName}</span>
-            <span className="text-yellow-400 text-xs italic">VS</span>
-            <span className="text-pink-400 truncate max-w-[120px] text-right">{opponentName}</span>
+            <span className="text-cyan-400 truncate max-w-[120px] whitespace-nowrap">{playerName}</span>
+            <span className="text-yellow-400 text-xs italic whitespace-nowrap">VS</span>
+            <span className="text-pink-400 truncate max-w-[120px] text-right whitespace-nowrap">{opponentName}</span>
           </div>
 
           <div className="bg-black/80 border border-yellow-400/50 rounded-lg px-6 py-2 flex flex-col items-center shadow-[0_0_15px_rgba(255,251,0,0.15)] my-1 w-full">
-            <span className="text-[10px] text-yellow-400 font-bold tracking-widest uppercase">
+            <span className="text-[10px] text-yellow-400 font-bold tracking-widest uppercase whitespace-nowrap">
               {isDraw ? '🤝 MATCH RESULT' : '👑 BOOTH CHAMPION'}
             </span>
-            <span className="text-2xl font-black tracking-widest text-white text-glow-green uppercase mt-0.5">
+            <span className="text-2xl font-black tracking-widest text-white text-glow-green uppercase mt-0.5 whitespace-nowrap">
               {isDraw ? 'DRAW (TIE)' : winnerName}
             </span>
-            <span className="text-sm font-extrabold text-yellow-300 tracking-wider">
+            <span className="text-sm font-extrabold text-yellow-300 tracking-wider whitespace-nowrap">
               SCORE: {scoreStr}
             </span>
           </div>
@@ -124,23 +131,23 @@ const BoothTicketCard = ({
         {/* Performance Breakdown */}
         <div className="grid grid-cols-3 gap-2 text-center border-b-2 border-dashed border-cyan-500/40 pb-4">
           <div className="bg-white/5 border border-white/10 rounded p-2 flex flex-col items-center">
-            <span className="text-[9px] text-white/50 tracking-widest uppercase">SPEED</span>
-            <span className="text-lg font-bold text-green-400">{wpm} <span className="text-[9px]">WPM</span></span>
+            <span className="text-[9px] text-white/50 tracking-widest uppercase whitespace-nowrap">SPEED</span>
+            <span className="text-lg font-bold text-green-400 whitespace-nowrap">{wpm} <span className="text-[9px]">WPM</span></span>
           </div>
           <div className="bg-white/5 border border-white/10 rounded p-2 flex flex-col items-center">
-            <span className="text-[9px] text-white/50 tracking-widest uppercase">ACCURACY</span>
-            <span className="text-lg font-bold text-cyan-400">{accuracy}%</span>
+            <span className="text-[9px] text-white/50 tracking-widest uppercase whitespace-nowrap">ACCURACY</span>
+            <span className="text-lg font-bold text-cyan-400 whitespace-nowrap">{accuracy}%</span>
           </div>
           <div className="bg-white/5 border border-white/10 rounded p-2 flex flex-col items-center">
-            <span className="text-[9px] text-white/50 tracking-widest uppercase">COMBO</span>
-            <span className="text-lg font-bold text-yellow-400">×{maxCombo}</span>
+            <span className="text-[9px] text-white/50 tracking-widest uppercase whitespace-nowrap">COMBO</span>
+            <span className="text-lg font-bold text-yellow-400 whitespace-nowrap">×{maxCombo}</span>
           </div>
         </div>
 
         {/* QR Code & Mobile Download Section */}
         <div className="mt-4 flex items-center justify-between gap-4 bg-black/60 border border-white/10 rounded-xl p-3">
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] text-yellow-300 font-bold tracking-widest uppercase flex items-center gap-1">
+            <span className="text-[11px] text-yellow-300 font-bold tracking-widest uppercase flex items-center gap-1 whitespace-nowrap">
               <QrCode size={13} /> SCAN TO KEEP
             </span>
             <span className="text-[9px] text-white/60 leading-tight max-w-[160px]">
@@ -162,7 +169,7 @@ const BoothTicketCard = ({
         {/* Decorative Barcode */}
         <div className="mt-4 flex flex-col items-center gap-1">
           <div className="h-6 w-full bg-[repeating-linear-gradient(90deg,#fff,#fff_2px,#000_2px,#000_5px)] opacity-60 rounded" />
-          <span className="text-[8px] text-white/30 tracking-[0.4em] font-mono">TYPE-BTL-BOOTH-AUTHENTICATED</span>
+          <span className="text-[8px] text-white/30 tracking-[0.4em] font-mono whitespace-nowrap">TYPE-BTL-BOOTH-AUTHENTICATED</span>
         </div>
       </div>
 
