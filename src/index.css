@@ -278,4 +278,24 @@
   .animate-shield {
     animation: shieldShimmer 1.5s infinite ease-in-out;
   }
+
+  /* ── Floating Combat Text Keyframe ── */
+  @keyframes floatCombat {
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(0.9);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-28px) scale(1.15);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-55px) scale(1);
+    }
+  }
+
+  .animate-float-combat {
+    animation: floatCombat 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
 }

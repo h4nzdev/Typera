@@ -1,8 +1,8 @@
 import React from 'react';
 import ArcadeText from '../arcade/ArcadeText';
-import { User } from 'lucide-react';
+import FloatingCombatText from './FloatingCombatText';
 
-const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', reverse = false, hp, maxHp, showHp = false, points = null }) => {
+const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', reverse = false, hp, maxHp, showHp = false, points = null, stats = null }) => {
   const borderColor = color === 'cyan' ? 'border-[var(--color-neon-cyan)] shadow-[0_0_15px_var(--color-neon-cyan-muted)]' : 'border-[var(--color-neon-pink)] shadow-[0_0_15px_var(--color-neon-pink-muted)]';
   const textColor = color === 'cyan' ? 'text-[var(--color-neon-cyan)]' : 'text-[var(--color-neon-pink)]';
   const barColor = color === 'cyan' ? 'bg-[var(--color-neon-cyan)]' : 'bg-[var(--color-neon-pink)]';
@@ -29,7 +29,8 @@ const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', rever
   const clipPathLeft = 'polygon(20% 0, 100% 0, 80% 50%, 100% 100%, 20% 100%, 0 50%)';
 
   return (
-    <div className={`flex items-start gap-4 md:gap-6 ${reverse ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex items-start gap-4 md:gap-6 relative ${reverse ? 'flex-row-reverse' : 'flex-row'}`}>
+      <FloatingCombatText stats={stats} color={color} />
       {/* Avatar Box — pixel art style */}
       <div className={`w-20 h-20 md:w-24 md:h-24 border-2 ${borderColor} bg-black flex items-center justify-center overflow-hidden shrink-0 relative`}
         style={{ imageRendering: 'pixelated', boxShadow: color === 'cyan' ? '0 0 12px rgba(0,243,255,0.3), inset 0 0 12px rgba(0,243,255,0.05)' : '0 0 12px rgba(255,0,127,0.3), inset 0 0 12px rgba(255,0,127,0.05)' }}>

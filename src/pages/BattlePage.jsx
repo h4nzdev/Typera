@@ -689,6 +689,7 @@ const BattlePage = () => {
                maxHp={MAX_HP}
                showHp={gameMode === 'deathmatch'}
                points={gameMode === 'classic_booth' ? (isHost ? localPoints : opponentPoints) : null}
+               stats={isHost ? { progress, wpm, combo, damageDealt: localDamage } : opponentStats}
             />
             <div className="flex flex-col items-center mx-4">
               <ArcadeText as="div" color="cyan" glow className="text-7xl italic font-bold -skew-x-12">V<span className="text-[var(--color-neon-pink)]">S</span></ArcadeText>
@@ -705,6 +706,7 @@ const BattlePage = () => {
                maxHp={MAX_HP}
                showHp={gameMode === 'deathmatch'}
                points={gameMode === 'classic_booth' ? (!isHost ? localPoints : opponentPoints) : null}
+               stats={!isHost ? { progress, wpm, combo, damageDealt: localDamage } : opponentStats}
             />
           </div>
         </div>
