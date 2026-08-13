@@ -14,10 +14,13 @@ const generateChallenge = (count = 15, category = 'all', mode = 'race') => {
     const word = wordList[randomIndex];
     
     let type = 'normal';
+    const rand = Math.random();
     if (mode === 'deathmatch') {
-      const rand = Math.random();
       if (rand < 0.05) type = 'tnt';
       else if (rand < 0.15) type = 'sword';
+      else if (rand < 0.25) type = 'critical';
+    } else {
+      if (rand < 0.12) type = 'critical';
     }
     
     words.push({ word, type });

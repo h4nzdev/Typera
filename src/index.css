@@ -224,4 +224,58 @@
   .animate-simple-cursor {
     animation: softGlowPulse 1.2s infinite ease-in-out;
   }
+
+  /* ── 🔥 Streak Fire Trail Keyframes ── */
+  @keyframes fireGlow1 {
+    0%, 100% { text-shadow: 0 0 4px #ff9500, 0 0 8px #ff6600; }
+    50%      { text-shadow: 0 0 6px #ffb347, 0 0 12px #ff8c00; }
+  }
+  @keyframes fireGlow2 {
+    0%, 100% { text-shadow: 0 0 6px #ff6600, 0 0 14px #ff3d00; }
+    50%      { text-shadow: 0 0 10px #ff8c00, 0 0 20px #ff5722; }
+  }
+  @keyframes fireGlow3 {
+    0%, 100% { text-shadow: 0 0 8px #ff3300, 0 0 18px #ff6600, 0 0 28px #ff9500; }
+    50%      { text-shadow: 0 0 12px #ff5722, 0 0 24px #ff3d00, 0 0 36px #ffb347; }
+  }
+  @keyframes fireGlow4 {
+    0%, 100% { text-shadow: 0 0 10px #ff0000, 0 0 22px #ff3300, 0 0 36px #ff6600, 0 0 48px #fffb00; }
+    50%      { text-shadow: 0 0 16px #ff3300, 0 0 30px #ff0000, 0 0 44px #ff9500, 0 0 56px #fffb00; }
+  }
+
+  .animate-fire-1 { animation: fireGlow1 0.6s infinite ease-in-out; }
+  .animate-fire-2 { animation: fireGlow2 0.5s infinite ease-in-out; }
+  .animate-fire-3 { animation: fireGlow3 0.4s infinite ease-in-out; }
+  .animate-fire-4 { animation: fireGlow4 0.35s infinite ease-in-out; }
+
+  /* ── ⚡ Critical Word Gold Pulse ── */
+  @keyframes criticalGoldPulse {
+    0%, 100% { text-shadow: 0 0 8px #ffd700, 0 0 16px rgba(255,215,0,0.5); color: #ffd700; }
+    50%      { text-shadow: 0 0 14px #ffec8b, 0 0 28px rgba(255,215,0,0.8); color: #ffec8b; }
+  }
+
+  .animate-critical-word {
+    animation: criticalGoldPulse 1.5s infinite ease-in-out;
+    font-weight: 700;
+  }
+
+  /* ── 💀 Sudden Death Red Vignette Pulse ── */
+  @keyframes suddenDeathPulse {
+    0%, 100% { box-shadow: inset 0 0 60px rgba(255,0,0,0.3), inset 0 0 120px rgba(255,0,0,0.1); }
+    50%      { box-shadow: inset 0 0 80px rgba(255,0,0,0.6), inset 0 0 160px rgba(255,0,0,0.25); }
+  }
+
+  .animate-sudden-death {
+    animation: suddenDeathPulse 1s infinite ease-in-out;
+  }
+
+  /* ── 🛡️ Shield Shimmer ── */
+  @keyframes shieldShimmer {
+    0%, 100% { box-shadow: 0 0 10px rgba(0,200,255,0.4), inset 0 0 10px rgba(0,200,255,0.1); border-color: rgba(0,200,255,0.6); }
+    50%      { box-shadow: 0 0 20px rgba(0,200,255,0.7), inset 0 0 20px rgba(0,200,255,0.2); border-color: rgba(0,200,255,1); }
+  }
+
+  .animate-shield {
+    animation: shieldShimmer 1.5s infinite ease-in-out;
+  }
 }

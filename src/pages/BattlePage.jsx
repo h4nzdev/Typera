@@ -68,6 +68,9 @@ const BattlePage = () => {
   const [battlePhase, setBattlePhase] = useState('waiting'); // waiting, countdown, playing
   const [countdown, setCountdown] = useState(null);
   const [triggerCombo50, setTriggerCombo50] = useState(0);
+  const [comboMultiplier, setComboMultiplier] = useState(1);
+  const [hasShield, setHasShield] = useState(false);
+  const [isSuddenDeath, setIsSuddenDeath] = useState(false);
 
   const statsRef = useRef({ totalKeystrokes: 0, errors: 0, wordErrors: 0 });
   const maxComboRef = useRef(0);
@@ -228,6 +231,15 @@ const BattlePage = () => {
     }
   }, [status, battlePhase, endGame]);
 
+  // Handle Shield Interceptor for Incoming Debuffs
+  useEffect(() => {
+    if (activeDebuff && hasShield) {
+      setHasShield(false);
+      useMatchStore.getState().setActiveDebuff(null);
+      playSound('hover');
+    }
+  }, [activeDebuff, hasShield]);
+
   // Handle Steal Debuff (Target loses 15 characters / 2-3 words of typed progress)
   useEffect(() => {
     if (activeDebuff?.type === 'steal' && battlePhase === 'playing') {
@@ -259,6 +271,12 @@ const BattlePage = () => {
 
     if (e.key === 'Enter' && heldPowerUp) {
       playSound('click');
+      if (heldPowerUp === 'shield') {
+        setHasShield(true);
+        setHeldPowerUp(null);
+        playSound('start');
+        return;
+      }
       useMatchStore.getState().sendPowerUp(heldPowerUp);
       if (heldPowerUp === 'steal') {
          setTyped(prev => {
@@ -350,7 +368,7 @@ const BattlePage = () => {
         newCombo = 0;
       } else {
         playSound('keyPress');
-        newCombo = combo + 1;
+        newCombo = combo + (1 * comboMultiplier);
         maxComboRef.current = Math.max(maxComboRef.current, newCombo);
         if (newCombo > 0 && newCombo % 10 === 0) playSound('combo');
         
@@ -359,33 +377,41 @@ const BattlePage = () => {
           setTriggerCombo50(Date.now());
         }
 
-        // Power-Up Generation
-        if (newCombo > 0 && newCombo % 20 === 0 && !heldPowerUp) {
-          const types = ['glitch', 'blind', 'steal', 'freeze'];
+        // Power-Up Generation (Unlock shield at 30 combo, or random debuffs at 20 combo)
+        if (newCombo > 0 && (newCombo % 20 === 0 || newCombo % 30 === 0) && !heldPowerUp) {
+          const types = newCombo % 30 === 0 
+            ? ['shield', 'steal', 'freeze'] 
+            : ['glitch', 'blind', 'steal', 'freeze', 'shield'];
           setHeldPowerUp(types[Math.floor(Math.random() * types.length)]);
-          playVoice('powerup'); // Play powerup.mp3!
+          playVoice('powerup');
         }
       }
       setCombo(newCombo);
       
       let newDamage = localDamage;
-      if (nextChar === expectedChar && gameMode === 'deathmatch') {
-        newDamage += 1; // 1 damage per correct char
+      if (nextChar === expectedChar) {
+        if (gameMode === 'deathmatch') {
+          newDamage += 1;
+        }
         
-        // If we finished a word, check for bonus
+        // Check for completed word bonus
         if (nextChar === ' ') {
            const wordIndex = (prev.match(/ /g) || []).length;
            const wordObj = challengeWords[wordIndex];
            if (wordObj && statsRef.current.wordErrors === 0) {
-             if (wordObj.type === 'tnt') {
+             if (wordObj.type === 'tnt' && gameMode === 'deathmatch') {
                newDamage += 50;
-               playSound('start'); // explosion sound placeholder
-             } else if (wordObj.type === 'sword') {
+               playSound('start');
+             } else if (wordObj.type === 'sword' && gameMode === 'deathmatch') {
                newDamage += 25;
                playSound('start');
+             } else if (wordObj.type === 'critical') {
+               setComboMultiplier(2);
+               playVoice('powerup');
+               setTimeout(() => setComboMultiplier(1), 5000);
              }
            }
-           statsRef.current.wordErrors = 0; // reset for next word
+           statsRef.current.wordErrors = 0;
         }
       }
       setLocalDamage(newDamage);
@@ -454,6 +480,10 @@ const BattlePage = () => {
     if (isMatchActive && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft(prev => {
+          if (prev <= 31 && prev > 1 && gameMode === 'race' && !isSuddenDeath) {
+            setIsSuddenDeath(true);
+            playVoice('powerup');
+          }
           if (prev <= 1) {
             clearInterval(interval);
             // Time ran out! Compare progress to decide winner
@@ -632,6 +662,15 @@ const BattlePage = () => {
       <DebuffBanner activeDebuff={activeDebuff} />
       <ComboBanner triggerCombo={triggerCombo50} />
 
+      {/* Sudden Death Vignette & Overlay */}
+      {isSuddenDeath && (
+        <div className="pointer-events-none fixed inset-0 z-40 animate-sudden-death flex items-start justify-center pt-20">
+          <div className="bg-red-950/90 border-2 border-red-500 px-6 py-2 rounded-full text-red-400 font-black tracking-widest text-lg md:text-xl animate-pulse shadow-[0_0_30px_rgba(255,0,0,0.8)] font-[family-name:var(--font-arcade)]">
+            💀 SUDDEN DEATH OVERTIME 💀
+          </div>
+        </div>
+      )}
+
       <div className="w-full mx-auto flex flex-col z-10 h-full flex-grow justify-between max-w-[1800px]">
         {/* Top Section */}
         <div className="flex flex-col gap-6 w-full">
@@ -753,8 +792,25 @@ const BattlePage = () => {
               </div>
             )}
 
+            {/* ── SHIELD ACTIVE BADGE & 2X COMBO BOOST BADGES ── */}
+            <div className="flex items-center justify-between w-full mb-1 z-20">
+              {hasShield ? (
+                <div className="flex items-center gap-1 bg-cyan-950/90 border border-cyan-400 px-3 py-1 rounded-full text-xs text-cyan-300 animate-shield shadow-[0_0_12px_rgba(0,243,255,0.4)] font-[family-name:var(--font-arcade)]">
+                  <span>🛡️</span>
+                  <span className="font-bold tracking-wider">SHIELD ACTIVE (BLOCKS NEXT DEBUFF)</span>
+                </div>
+              ) : <div />}
+
+              {comboMultiplier > 1 && (
+                <div className="flex items-center gap-1 bg-yellow-950/90 border border-yellow-400 px-3 py-1 rounded-full text-xs text-yellow-300 animate-bounce tracking-widest font-[family-name:var(--font-arcade)] shadow-[0_0_12px_rgba(255,255,0,0.5)]">
+                  <span>⚡</span>
+                  <span className="font-bold">2X COMBO BOOST (5S)</span>
+                </div>
+              )}
+            </div>
+
             <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-2xl opacity-5 scale-95 pointer-events-none select-none' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-cyber-glitch scale-[1.02]' : ''} ${activeDebuff?.type === 'steal' ? 'animate-shake border-red-500' : ''} ${activeDebuff?.type === 'freeze' ? 'blur-sm scale-[0.98] grayscale pointer-events-none' : ''}`}>
-              <TypingText text={challengeText} words={challengeWords} typed={typed} />
+              <TypingText text={challengeText} words={challengeWords} typed={typed} combo={combo} />
             </div>
           </div>
 

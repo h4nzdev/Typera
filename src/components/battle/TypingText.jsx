@@ -1,6 +1,6 @@
 import React from 'react';
 
-const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", words = null, typed = null }) => {
+const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", words = null, typed = null, combo = 0 }) => {
   const activeCharRef = React.useRef(null);
   const containerRef = React.useRef(null);
   
@@ -14,6 +14,13 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
       });
     }
   }, [typed]);
+
+  const fireTrailClass = 
+    combo >= 50 ? 'animate-fire-4 text-orange-400 font-black' :
+    combo >= 30 ? 'animate-fire-3 text-amber-300 font-extrabold' :
+    combo >= 20 ? 'animate-fire-2 text-yellow-300 font-bold' :
+    combo >= 10 ? 'animate-fire-1 text-[#39ff14]' :
+    'text-[#39ff14] [text-shadow:0_0_6px_rgba(57,255,20,0.6)]';
   
   const getCharState = (index) => {
     if (typed === null) {
@@ -71,7 +78,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                     let className = "";
                     
                     if (state === 'correct') {
-                      className = "text-[#39ff14] [text-shadow:0_0_6px_rgba(57,255,20,0.6)] animate-pop-fade";
+                      className = `${fireTrailClass} animate-pop-fade`;
                     } else if (state === 'incorrect') {
                       className = "text-red-400 bg-red-950/60 border-b-2 border-red-500/80 rounded-sm px-[1px]";
                     } else if (state === 'current') {
@@ -79,6 +86,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                     } else {
                       if (item.type === 'tnt') className = "text-red-400 font-bold animate-pulse";
                       else if (item.type === 'sword') className = "text-yellow-300 font-bold";
+                      else if (item.type === 'critical') className = "text-amber-300 font-bold animate-critical-word";
                       else className = "text-white/35";
                     }
                     
@@ -100,7 +108,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                     let className = "";
                     
                     if (state === 'correct') {
-                      className = "text-[#39ff14] [text-shadow:0_0_6px_rgba(57,255,20,0.6)] animate-pop-fade";
+                      className = `${fireTrailClass} animate-pop-fade`;
                     } else if (state === 'incorrect') {
                       className = "text-red-400 bg-red-950/60 border-b-2 border-red-500/80 rounded-sm px-[1px]";
                     } else if (state === 'current') {
