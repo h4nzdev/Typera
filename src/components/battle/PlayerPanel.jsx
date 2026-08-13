@@ -1,6 +1,7 @@
 import React from 'react';
 import ArcadeText from '../arcade/ArcadeText';
 import FloatingCombatText from './FloatingCombatText';
+import useMatchStore from '../../store/useMatchStore';
 
 const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', reverse = false, hp, maxHp, showHp = false, points = null, stats = null }) => {
   const borderColor = color === 'cyan' ? 'border-[var(--color-neon-cyan)] shadow-[0_0_15px_var(--color-neon-cyan-muted)]' : 'border-[var(--color-neon-pink)] shadow-[0_0_15px_var(--color-neon-pink-muted)]';
@@ -13,6 +14,17 @@ const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', rever
   
   const [isHit, setIsHit] = React.useState(false);
   const prevHp = React.useRef(hp);
+
+  const opponentStrikePulse = useMatchStore(state => state.opponentStrikePulse);
+  const [strikeFlash, setStrikeFlash] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isYou && opponentStrikePulse) {
+      setStrikeFlash(true);
+      const timer = setTimeout(() => setStrikeFlash(false), 140);
+      return () => clearTimeout(timer);
+    }
+  }, [isYou, opponentStrikePulse]);
 
   React.useEffect(() => {
     if (showHp && hp < prevHp.current) {
@@ -32,8 +44,13 @@ const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', rever
     <div className={`flex items-start gap-4 md:gap-6 relative ${reverse ? 'flex-row-reverse' : 'flex-row'}`}>
       <FloatingCombatText stats={stats} color={color} />
       {/* Avatar Box — pixel art style */}
-      <div className={`w-20 h-20 md:w-24 md:h-24 border-2 ${borderColor} bg-black flex items-center justify-center overflow-hidden shrink-0 relative`}
-        style={{ imageRendering: 'pixelated', boxShadow: color === 'cyan' ? '0 0 12px rgba(0,243,255,0.3), inset 0 0 12px rgba(0,243,255,0.05)' : '0 0 12px rgba(255,0,127,0.3), inset 0 0 12px rgba(255,0,127,0.05)' }}>
+      <div className={`w-20 h-20 md:w-24 md:h-24 border-2 ${borderColor} bg-black flex items-center justify-center overflow-hidden shrink-0 relative transition-all duration-100 ${strikeFlash ? 'scale-110 border-white bg-white/20' : ''}`}
+        style={{
+          imageRendering: 'pixelated',
+          boxShadow: strikeFlash
+            ? '0 0 25px #ff007f, inset 0 0 20px #ff007f'
+            : (color === 'cyan' ? '0 0 12px rgba(0,243,255,0.3), inset 0 0 12px rgba(0,243,255,0.05)' : '0 0 12px rgba(255,0,127,0.3), inset 0 0 12px rgba(255,0,127,0.05)')
+        }}>
         {/* Pixel corner accents */}
         <div className={`absolute top-0 left-0 w-2 h-2 ${barColor}`} />
         <div className={`absolute top-0 right-0 w-2 h-2 ${barColor}`} />

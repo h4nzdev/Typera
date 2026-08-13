@@ -55,14 +55,20 @@ const useMatchStore = create((set, get) => ({
   challengeWords: [],
   gameMode: 'race',
   category: 'all',
-  localPoints: 0,
-  opponentPoints: 0,
-  isPaused: false,
   activeDebuff: null,
   opponentDebuff: null,
+  opponentStrikePulse: null,
 
-  // Internal throttled sender – replaced each time initMatch runs
+  // Internal throttled senders – replaced each time initMatch runs
   _throttledBroadcast: null,
+  _throttledStrikeBroadcast: null,
+
+  broadcastKeystrokeStrike: (char, combo) => {
+    const { _throttledStrikeBroadcast } = get();
+    if (_throttledStrikeBroadcast) {
+      _throttledStrikeBroadcast(char, combo);
+    }
+  },
 
   setActiveDebuff: (debuff) => set({ activeDebuff: debuff }),
 
@@ -216,9 +222,15 @@ const useMatchStore = create((set, get) => ({
         event: 'stats_update',
         payload: { id: myId, stats },
       });
-    }, 50);
+    const throttledStrike = throttle((char, combo) => {
+      newChannel.send({
+        type: 'broadcast',
+        event: 'keystroke_hit',
+        payload: { id: myId, char, combo },
+      });
+    }, 30);
 
-    set({ _throttledBroadcast: throttledSend });
+    set({ _throttledBroadcast: throttledSend, _throttledStrikeBroadcast: throttledStrike });
 
     newChannel
       .on('presence', { event: 'sync' }, () => {
@@ -296,6 +308,11 @@ const useMatchStore = create((set, get) => ({
             set({ activeDebuff: null });
           }
         }, duration);
+      })
+      .on('broadcast', { event: 'keystroke_hit' }, (payload) => {
+        if (payload.payload.id !== get().myId) {
+          set({ opponentStrikePulse: { ts: Date.now(), char: payload.payload.char, combo: payload.payload.combo } });
+        }
       })
       .on('broadcast', { event: 'stats_update' }, (payload) => {
         if (payload.payload.id !== get().myId) {

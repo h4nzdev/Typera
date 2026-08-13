@@ -372,6 +372,9 @@ const BattlePage = () => {
         maxComboRef.current = Math.max(maxComboRef.current, newCombo);
         if (newCombo > 0 && newCombo % 10 === 0) playSound('combo');
         
+        // Broadcast real-time strike impulse to opponent
+        useMatchStore.getState().broadcastKeystrokeStrike(nextChar, newCombo);
+
         // 50x Combo Banner & Voice Trigger!
         if (newCombo > 0 && newCombo % 50 === 0) {
           setTriggerCombo50(Date.now());
