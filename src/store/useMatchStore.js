@@ -222,6 +222,8 @@ const useMatchStore = create((set, get) => ({
         event: 'stats_update',
         payload: { id: myId, stats },
       });
+    }, 50);
+
     const throttledStrike = throttle((char, combo) => {
       newChannel.send({
         type: 'broadcast',
