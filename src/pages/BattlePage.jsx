@@ -276,6 +276,17 @@ const BattlePage = () => {
            }
            const newProgress = Math.min(100, Math.round((next.length / challengeText.length) * 100)) || 0;
            broadcastStats({ progress: newProgress, wpm, accuracy, combo });
+
+           // Check if steal completed the text
+           if (next === challengeText) {
+             if (gameMode === 'race') {
+               const isDraw = opponentStats.progress >= 100;
+               setTimeout(() => endGame(!isDraw, false, isDraw), 200);
+             } else if (gameMode === 'classic_booth') {
+               setTimeout(() => useMatchStore.getState().recordRoundWinner(myId), 200);
+             }
+           }
+
            return next;
          });
       }
@@ -420,12 +431,15 @@ const BattlePage = () => {
          useMatchStore.getState().appendWords(30);
       }
       
-      if (gameMode === 'race' && next === challengeText) {
+      // Check completion: exact match OR all characters correctly typed (progress 100%)
+      const isComplete = next === challengeText || (next.length >= challengeText.length && newProgress >= 100);
+      
+      if (gameMode === 'race' && isComplete) {
          const isDraw = opponentStats.progress >= 100;
          setTimeout(() => endGame(!isDraw, false, isDraw), 200);
       }
       
-      if (gameMode === 'classic_booth' && next === challengeText) {
+      if (gameMode === 'classic_booth' && isComplete) {
          // I am the winner of the round! Broadcast it. The useEffect will catch it and call endGame.
          useMatchStore.getState().recordRoundWinner(myId);
          setIsMatchActive(false);
@@ -764,7 +778,7 @@ const BattlePage = () => {
         </div>
         
         {/* Bottom Section */}
-        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-4 mt-auto pb-4 relative z-30">
+        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-1 mt-2 pb-4 relative z-30">
           <StatsPanel 
             wpm={wpm.toString()} 
             accuracy={`${accuracy}%`} 
