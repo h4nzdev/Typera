@@ -116,23 +116,29 @@ const BattlePage = () => {
     });
   }, [navigate, wpm, accuracy, gameMode, localPoints, opponentPoints]);
 
-  // Handle Instant Ready Handshake & Ultra-Fast Pulse
+  // ─── SIMPLE READY HANDSHAKE ─────────────────────────────────────────
+  // 1. On mount: mark ourselves ready and broadcast it
+  // 2. Heartbeat: re-broadcast every 300ms until opponent is also ready
+  // 3. When both ready → countdown
   useEffect(() => {
+    console.log('[BATTLE] Mounted, calling setLocalReady');
     useMatchStore.getState().setLocalReady();
-    useMatchStore.getState().queryReadyStatus();
 
     const interval = setInterval(() => {
-      const { localReady, opponentReady } = useMatchStore.getState();
+      const { opponentReady } = useMatchStore.getState();
       if (!opponentReady) {
-        useMatchStore.getState().queryReadyStatus();
+        console.log('[BATTLE] Opponent not ready yet, re-broadcasting...');
+        useMatchStore.getState().pingReady();
       }
-    }, 150);
+    }, 300);
 
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
+    console.log('[BATTLE] Ready state changed:', { localReady, opponentReady, battlePhase });
     if (localReady && opponentReady && battlePhase === 'waiting') {
+      console.log('[BATTLE] BOTH READY → starting countdown!');
       setBattlePhase('countdown');
     }
   }, [localReady, opponentReady, battlePhase]);

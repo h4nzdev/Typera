@@ -48,7 +48,7 @@ const useMatchStore = create((set, get) => ({
   opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
   localReady: false,
   opponentReady: false,
-  roundNumber: 1, // Strict round tracking for ready handshake
+  roundNumber: 1,
   challengeWords: [],
   gameMode: 'race',
   category: 'all',
@@ -136,43 +136,29 @@ const useMatchStore = create((set, get) => ({
     }
   },
 
-  setLocalReady: async () => {
-    const { channel, isHost, roundNumber, myId } = get();
+  // ─── SIMPLE READY: just broadcast, no presence, no async ──────────────
+  setLocalReady: () => {
+    const { channel, myId } = get();
     set({ localReady: true });
-    
+    console.log('[READY] setLocalReady called, broadcasting player_ready');
     if (channel) {
-      // 1. Broadcast player_ready IMMEDIATELY (<5ms)
       channel.send({
         type: 'broadcast',
         event: 'player_ready',
-        payload: { id: myId, readyRound: roundNumber, isReady: true }
+        payload: { id: myId }
       });
-
-      // 2. Async presence track in background
-      try {
-        const { playerName } = (await import('../store/useUserStore')).default.getState();
-        channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: roundNumber, isReady: true });
-      } catch (err) {
-        // Non-blocking
-      }
     }
   },
 
-  queryReadyStatus: () => {
-    const { channel, myId, roundNumber, localReady } = get();
-    if (channel) {
+  // Re-broadcast our ready state (used as heartbeat)
+  pingReady: () => {
+    const { channel, myId, localReady } = get();
+    if (channel && localReady) {
       channel.send({
         type: 'broadcast',
-        event: 'query_ready',
-        payload: { id: myId, roundNumber }
+        event: 'player_ready',
+        payload: { id: myId }
       });
-      if (localReady) {
-        channel.send({
-          type: 'broadcast',
-          event: 'player_ready',
-          payload: { id: myId, readyRound: roundNumber, isReady: true }
-        });
-      }
     }
   },
 
@@ -180,8 +166,10 @@ const useMatchStore = create((set, get) => ({
     set({ localReady: false, opponentReady: false });
     const { channel, isHost } = get();
     if (channel) {
-      const { playerName } = (await import('../store/useUserStore')).default.getState();
-      await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
+      try {
+        const { playerName } = (await import('../store/useUserStore')).default.getState();
+        channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
+      } catch(e) {}
     }
   },
 
@@ -267,53 +255,27 @@ const useMatchStore = create((set, get) => ({
              set({ challengeWords: currentWords });
            }
         }
-
-        // ── Presence Sync Handshake Check ────────────────────────────
-        if (connectedPlayers.length === 2) {
-          const myId = get().myId;
-          const currentRound = get().roundNumber || 1;
-          const me = connectedPlayers.find(p => p.id === myId);
-          const opponent = connectedPlayers.find(p => p.id !== myId);
-
-          const isMeReady = me?.isReady || me?.readyRound === currentRound;
-          const isOppReady = opponent?.isReady || opponent?.readyRound === currentRound;
-
-          set((state) => ({ 
-            localReady: state.localReady || Boolean(isMeReady), 
-            opponentReady: state.opponentReady || Boolean(isOppReady) 
-          }));
-        }
+        // NO ready checks in presence sync - presence is only for lobby player detection
       })
-      .on('broadcast', { event: 'query_ready' }, (payload) => {
-        const { myId, roundNumber, localReady, channel } = get();
-        if (payload.payload.id !== myId && channel) {
-          if (localReady) {
-            channel.send({
-              type: 'broadcast',
-              event: 'player_ready',
-              payload: { id: myId, readyRound: roundNumber, isReady: true }
-            });
-          }
-        }
-      })
+      // ─── SIMPLE: receive player_ready → set opponentReady ─────────
       .on('broadcast', { event: 'player_ready' }, (payload) => {
         const myId = get().myId;
         if (payload.payload.id !== myId) {
+          console.log('[READY] Received player_ready from opponent, setting opponentReady=true');
           set({ opponentReady: true });
         }
       })
       .on('broadcast', { event: 'match_setup' }, (payload) => {
         const nextRound = payload.payload.roundNumber || get().roundNumber || 1;
-        const roundChanged = nextRound !== get().roundNumber;
         
-        set((state) => ({ 
+        set({ 
           challengeWords: payload.payload.challengeWords, 
           category: payload.payload.category || 'all',
           gameMode: payload.payload.gameMode || 'race',
           roundNumber: nextRound,
-          localReady: roundChanged ? false : state.localReady,
-          opponentReady: roundChanged ? false : state.opponentReady,
-        }));
+          localReady: false,
+          opponentReady: false,
+        });
       })
       .on('broadcast', { event: 'match_append_words' }, (payload) => {
         set(state => ({ challengeWords: [...state.challengeWords, ...payload.payload.newWords] }));
@@ -334,7 +296,7 @@ const useMatchStore = create((set, get) => ({
       })
       .on('broadcast', { event: 'stats_update' }, (payload) => {
         if (payload.payload.id !== get().myId) {
-          set({ opponentStats: payload.payload.stats, opponentReady: true });
+          set({ opponentStats: payload.payload.stats });
         }
       })
       .on('broadcast', { event: 'round_winner' }, (payload) => {
@@ -376,7 +338,7 @@ const useMatchStore = create((set, get) => ({
     if (channel) {
       const resetPresence = async () => {
         const { playerName } = (await import('../store/useUserStore')).default.getState();
-        await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
+        channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
       };
       resetPresence();
     }
@@ -404,7 +366,7 @@ const useMatchStore = create((set, get) => ({
     if (channel) {
       const resetPresence = async () => {
         const { playerName } = (await import('../store/useUserStore')).default.getState();
-        await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
+        channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
       };
       resetPresence();
     }
