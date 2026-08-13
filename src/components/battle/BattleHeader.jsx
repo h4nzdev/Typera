@@ -1,7 +1,7 @@
 import React from 'react';
 import ArcadeText from '../arcade/ArcadeText';
 import { Pause } from 'lucide-react';
-import useMatchStore from '../../store/useMatchStore';
+import PingBadge from '../arcade/PingBadge';
 
 const BattleHeader = ({ timeLeft = "01:24", matchCode = "8F2K91", onPause }) => {
   const { gameMode, localPoints, opponentPoints } = useMatchStore();
@@ -9,8 +9,8 @@ const BattleHeader = ({ timeLeft = "01:24", matchCode = "8F2K91", onPause }) => 
 
   return (
     <div className="flex justify-between items-center w-full gap-4">
-      {/* Left: Match Code */}
-      <div className="flex-1 flex items-start">
+      {/* Left: Match Code & Ping */}
+      <div className="flex-1 flex items-center gap-3">
         <div className="relative border-2 border-[var(--color-neon-purple)] px-3 py-1.5 bg-black"
           style={{ boxShadow: '0 0 10px rgba(176,38,255,0.25), inset 0 0 10px rgba(176,38,255,0.05)' }}>
           <div className="absolute -top-1 -left-1 w-2 h-2 bg-[var(--color-neon-purple)]" />
@@ -20,6 +20,7 @@ const BattleHeader = ({ timeLeft = "01:24", matchCode = "8F2K91", onPause }) => 
           <span className="font-[family-name:var(--font-arcade)] text-[9px] tracking-widest text-white/30 block">MATCH CODE</span>
           <ArcadeText color="purple" glow className="text-lg tracking-wider">{matchCode || '------'}</ArcadeText>
         </div>
+        <PingBadge />
       </div>
 
       {/* Center: Logo + Mode */}

@@ -6,6 +6,7 @@ import ArcadeButton from '../components/arcade/ArcadeButton';
 import SpectatorKeyboard from '../components/battle/SpectatorKeyboard';
 import DebuffBanner from '../components/battle/DebuffBanner';
 import ComboBanner from '../components/battle/ComboBanner';
+import PingBadge from '../components/arcade/PingBadge';
 import { playSound, playVoice } from '../lib/sounds';
 import { Tv, ArrowLeft, Radio, Trophy } from 'lucide-react';
 
@@ -186,6 +187,7 @@ const SpectatePage = () => {
           <span className="text-cyan-400 bg-cyan-950/60 border border-cyan-500/40 px-3 py-1 rounded">MATCH: {matchCode || '---'}</span>
           <span className="text-yellow-400 bg-yellow-950/60 border border-yellow-500/40 px-3 py-1 rounded">MODE: {gameMode.toUpperCase()}</span>
           <span className="text-green-400 bg-green-950/60 border border-green-500/40 px-3 py-1 rounded">{channelState}</span>
+          <PingBadge />
         </div>
       </div>
 

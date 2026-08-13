@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import ArcadeText from '../components/arcade/ArcadeText';
 import ArcadeButton from '../components/arcade/ArcadeButton';
+import PingBadge from '../components/arcade/PingBadge';
 import useMatchStore from '../store/useMatchStore';
 
-const PlayerCard = ({ playerName, label, color, isReady, isWaiting }) => {
+const PlayerCard = ({ playerName, label, color, isReady, isWaiting, ping }) => {
   const c = color === 'cyan' ? { hex: '#00f3ff', muted: 'rgba(0,243,255,0.1)' } : { hex: '#ff007f', muted: 'rgba(255,0,127,0.1)' };
 
   return (
@@ -135,6 +136,11 @@ const MatchLobbyPage = () => {
           </div>
         </div>
       )}
+
+      {/* Ping Monitor Badge */}
+      <div className="absolute top-6 right-6 z-20">
+        <PingBadge />
+      </div>
 
       <div className="z-10 w-full max-w-4xl px-4 flex flex-col items-center gap-8">
         {/* Title */}
