@@ -2,6 +2,7 @@ import React from 'react';
 import ArcadeText from '../arcade/ArcadeText';
 import { Pause } from 'lucide-react';
 import PingBadge from '../arcade/PingBadge';
+import useMatchStore from '../../store/useMatchStore';
 
 const BattleHeader = ({ timeLeft = "01:24", matchCode = "8F2K91", onPause }) => {
   const { gameMode, localPoints, opponentPoints } = useMatchStore();

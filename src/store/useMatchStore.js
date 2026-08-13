@@ -141,17 +141,20 @@ const useMatchStore = create((set, get) => ({
     set({ localReady: true });
     
     if (channel) {
-      const { playerName } = (await import('../store/useUserStore')).default.getState();
-      
-      // 1. Presence update
-      await channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: roundNumber, isReady: true });
-      
-      // 2. Broadcast player_ready
+      // 1. Broadcast player_ready IMMEDIATELY (<5ms)
       channel.send({
         type: 'broadcast',
         event: 'player_ready',
         payload: { id: myId, readyRound: roundNumber, isReady: true }
       });
+
+      // 2. Async presence track in background
+      try {
+        const { playerName } = (await import('../store/useUserStore')).default.getState();
+        channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: roundNumber, isReady: true });
+      } catch (err) {
+        // Non-blocking
+      }
     }
   },
 

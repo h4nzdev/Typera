@@ -116,8 +116,9 @@ const BattlePage = () => {
     });
   }, [navigate, wpm, accuracy, gameMode, localPoints, opponentPoints]);
 
-  // Handle Ready Handshake & Resilient Heartbeat Polling
+  // Handle Instant Ready Handshake & Ultra-Fast Pulse
   useEffect(() => {
+    useMatchStore.getState().setLocalReady();
     useMatchStore.getState().queryReadyStatus();
 
     const interval = setInterval(() => {
@@ -125,7 +126,7 @@ const BattlePage = () => {
       if (!opponentReady) {
         useMatchStore.getState().queryReadyStatus();
       }
-    }, 600);
+    }, 150);
 
     return () => clearInterval(interval);
   }, []);
