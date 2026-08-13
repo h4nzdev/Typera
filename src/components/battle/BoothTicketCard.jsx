@@ -23,6 +23,16 @@ const BoothTicketCard = ({
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const hasAutoDownloaded = useRef(false);
 
+  const [lanIpInput, setLanIpInput] = useState(() => localStorage.getItem('booth_lan_url') || '');
+  const [showLanConfig, setShowLanConfig] = useState(false);
+
+  const getBaseUrl = () => {
+    if (import.meta.env.VITE_PUBLIC_URL) return import.meta.env.VITE_PUBLIC_URL;
+    const lanUrl = localStorage.getItem('booth_lan_url');
+    if (lanUrl) return lanUrl.replace(/\/$/, '');
+    return window.location.origin;
+  };
+
   const dateStr = new Date().toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -32,20 +42,36 @@ const BoothTicketCard = ({
   });
 
   const scoreStr = `${myPoints} - ${opponentPoints}`;
-  const publicTicketUrl = `${window.location.origin}/ticket?p1=${encodeURIComponent(playerName)}&p2=${encodeURIComponent(opponentName)}&w=${encodeURIComponent(isDraw ? 'DRAW' : winnerName)}&s=${encodeURIComponent(scoreStr)}&wpm=${wpm}&acc=${accuracy}&c=${maxCombo}&d=${encodeURIComponent(dateStr)}&code=${encodeURIComponent(matchCode)}`;
+  const baseUrl = getBaseUrl();
+  const publicTicketUrl = `${baseUrl}/ticket?p1=${encodeURIComponent(playerName)}&p2=${encodeURIComponent(opponentName)}&w=${encodeURIComponent(isDraw ? 'DRAW' : winnerName)}&s=${encodeURIComponent(scoreStr)}&wpm=${wpm}&acc=${accuracy}&c=${maxCombo}&d=${encodeURIComponent(dateStr)}&code=${encodeURIComponent(matchCode)}`;
 
   useEffect(() => {
     QRCode.toDataURL(publicTicketUrl, {
-      width: 250,
+      width: 320,
       margin: 1,
+      errorCorrectionLevel: 'M',
       color: {
-        dark: '#05050a',
+        dark: '#000000',
         light: '#ffffff'
       }
     })
     .then(url => setQrDataUrl(url))
     .catch(err => console.error("QR Code Error:", err));
   }, [publicTicketUrl]);
+
+  const handleSaveLanUrl = (e) => {
+    e.preventDefault();
+    if (!lanIpInput.trim()) {
+      localStorage.removeItem('booth_lan_url');
+    } else {
+      let formatted = lanIpInput.trim();
+      if (!formatted.startsWith('http://') && !formatted.startsWith('https://')) {
+        formatted = `http://${formatted}`;
+      }
+      localStorage.setItem('booth_lan_url', formatted);
+    }
+    setShowLanConfig(false);
+  };
 
   const handleDownload = async () => {
     if (!ticketRef.current || isDownloading) return;
@@ -174,7 +200,7 @@ const BoothTicketCard = ({
       </div>
 
       {/* Action Button: Download PNG Ticket */}
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-3">
         <ArcadeButton 
           color="cyan" 
           onClick={handleDownload} 
@@ -191,6 +217,32 @@ const BoothTicketCard = ({
             </>
           )}
         </ArcadeButton>
+
+        {/* Booth WiFi Network IP Configurator (For Local Offline Booth Testing) */}
+        {!showLanConfig ? (
+          <button 
+            type="button" 
+            onClick={() => setShowLanConfig(true)}
+            className="text-[10px] text-white/40 hover:text-cyan-400 font-mono tracking-wider underline cursor-pointer"
+          >
+            ⚙ BOOTH NETWORK QR CONFIG (ORIGIN: {baseUrl})
+          </button>
+        ) : (
+          <form onSubmit={handleSaveLanUrl} className="flex flex-col items-center gap-2 bg-black/90 border border-yellow-400/50 p-3 rounded-xl max-w-sm w-full font-mono text-xs z-30">
+            <span className="text-yellow-300 text-[10px] font-bold tracking-widest uppercase text-center">SET BOOTH LAN / NETWORK IP FOR SCANNABLE QR CODE</span>
+            <input 
+              type="text" 
+              value={lanIpInput} 
+              onChange={(e) => setLanIpInput(e.target.value)} 
+              placeholder="e.g. 192.168.1.15:5173 or mybooth.com" 
+              className="w-full bg-black border border-white/20 rounded px-2 py-1 text-white text-xs outline-none focus:border-cyan-400"
+            />
+            <div className="flex gap-2 w-full">
+              <button type="submit" className="flex-1 bg-cyan-500/20 border border-cyan-400 text-cyan-300 py-1 rounded text-[10px] font-bold">SAVE IP</button>
+              <button type="button" onClick={() => setShowLanConfig(false)} className="flex-1 bg-gray-800 border border-gray-600 text-gray-300 py-1 rounded text-[10px]">CANCEL</button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

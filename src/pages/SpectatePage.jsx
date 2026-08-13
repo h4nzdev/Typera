@@ -34,6 +34,7 @@ const SpectatePage = () => {
     progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000, typed: '', lastKey: null, activeDebuff: null
   });
 
+  const [winnerId, setWinnerId] = useState(null);
   const [tickerMessage, setTickerMessage] = useState('WAITING FOR PLAYERS...');
   const [p1BannerDebuff, setP1BannerDebuff] = useState(null);
   const [p2BannerDebuff, setP2BannerDebuff] = useState(null);
@@ -79,10 +80,17 @@ const SpectatePage = () => {
         setChallengeText(textStr);
         setGameMode(payload.payload.gameMode || 'race');
         setMatchStatus('playing');
+        setWinnerId(null);
         setTickerMessage(`ROUND ${payload.payload.roundNumber || 1} IN PROGRESS!`);
       })
       .on('broadcast', { event: 'match_status' }, (payload) => {
         if (payload.payload.status) setMatchStatus(payload.payload.status);
+      })
+      .on('broadcast', { event: 'round_winner' }, (payload) => {
+        const wId = payload.payload.id;
+        setWinnerId(wId);
+        setMatchStatus('finished');
+        playVoice('you-win');
       })
       .on('broadcast', { event: 'stats_update' }, (payload) => {
         const id = payload.payload.id;
@@ -125,6 +133,19 @@ const SpectatePage = () => {
     };
   }, [matchCode, p1Info.id]);
 
+  // Automatic winner evaluation on 100% progress
+  useEffect(() => {
+    if (p1Stats.progress >= 100 && !winnerId) {
+      setWinnerId(p1Info.id || 'p1');
+      setMatchStatus('finished');
+      playVoice('you-win');
+    } else if (p2Stats.progress >= 100 && !winnerId) {
+      setWinnerId(p2Info.id || 'p2');
+      setMatchStatus('finished');
+      playVoice('you-win');
+    }
+  }, [p1Stats.progress, p2Stats.progress, p1Info.id, p2Info.id, winnerId]);
+
   const handleJoinSpectate = (e) => {
     e.preventDefault();
     if (!inputCode.trim()) return;
@@ -166,6 +187,10 @@ const SpectatePage = () => {
   };
 
   const wpmDiff = p1Stats.wpm - p2Stats.wpm;
+  const isFinished = matchStatus === 'finished' || p1Stats.progress >= 100 || p2Stats.progress >= 100;
+  const isP1Winner = isFinished && (winnerId ? (winnerId === p1Info.id || winnerId === 'p1') : p1Stats.progress > p2Stats.progress);
+  const isP2Winner = isFinished && (winnerId ? (winnerId === p2Info.id || winnerId === 'p2') : p2Stats.progress > p1Stats.progress);
+  const isDraw = isFinished && !isP1Winner && !isP2Winner;
 
   return (
     <div className="min-h-screen bg-[#05050a] text-white flex flex-col justify-between p-4 relative overflow-x-hidden font-mono select-none"
@@ -218,47 +243,85 @@ const SpectatePage = () => {
       ) : (
         <div className="w-full max-w-7xl mx-auto flex flex-col gap-6 my-auto z-20 py-4">
 
-          {/* ── CENTER ANNOUNCER TICKER & LEAD METER ── */}
-          <div className="flex flex-col items-center gap-2 bg-black/80 border-2 border-yellow-400/50 p-3 rounded-2xl shadow-[0_0_20px_rgba(255,251,0,0.2)]">
-            <span className="text-xs text-yellow-300 font-bold tracking-widest uppercase flex items-center gap-2 font-[family-name:var(--font-arcade)]">
-              <Trophy size={16} /> {tickerMessage}
-            </span>
-
-            {/* WPM Advantage Bar */}
-            <div className="w-full max-w-lg flex items-center gap-3">
-              <span className="text-[10px] text-cyan-400 font-bold">{p1Info.name} ({p1Stats.wpm} WPM)</span>
-              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden flex">
-                <div 
-                  className="h-full bg-cyan-400 transition-all duration-300" 
-                  style={{ width: `${Math.max(10, Math.min(90, 50 + (wpmDiff * 2)))}%` }} 
-                />
-                <div className="h-full bg-pink-500 flex-1 transition-all duration-300" />
+          {/* ── SPECTATOR MATCH RESULT ANNOUNCEMENT BANNER ── */}
+          {isFinished ? (
+            <div className="flex flex-col items-center gap-3 bg-gradient-to-r from-yellow-950/90 via-black/95 to-yellow-950/90 border-2 border-yellow-400 p-5 rounded-2xl shadow-[0_0_40px_rgba(255,215,0,0.4)]">
+              <div className="flex items-center gap-2 text-yellow-300 font-[family-name:var(--font-arcade)] text-xl tracking-widest">
+                <span>🏆</span>
+                <span>MATCH COMPLETED!</span>
+                <span>🏆</span>
               </div>
-              <span className="text-[10px] text-pink-400 font-bold">{p2Info.name} ({p2Stats.wpm} WPM)</span>
+
+              <div className="flex items-center gap-6 my-1">
+                <div className={`flex flex-col items-center px-6 py-2 rounded-xl border ${isP1Winner ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300 shadow-[0_0_20px_rgba(255,215,0,0.4)]' : 'bg-black/40 border-gray-700 text-gray-400'}`}>
+                  <span className="text-xs font-bold font-[family-name:var(--font-arcade)]">{isP1Winner ? '👑 WINNER' : (isDraw ? '🤝 DRAW' : '💀 LOSER')}</span>
+                  <span className="text-xl font-black">{p1Info.name}</span>
+                  <span className="text-xs text-white/70">{p1Stats.wpm} WPM • {p1Stats.accuracy}% ACC</span>
+                </div>
+
+                <span className="text-2xl font-black text-white/40">VS</span>
+
+                <div className={`flex flex-col items-center px-6 py-2 rounded-xl border ${isP2Winner ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300 shadow-[0_0_20px_rgba(255,215,0,0.4)]' : 'bg-black/40 border-gray-700 text-gray-400'}`}>
+                  <span className="text-xs font-bold font-[family-name:var(--font-arcade)]">{isP2Winner ? '👑 WINNER' : (isDraw ? '🤝 DRAW' : '💀 LOSER')}</span>
+                  <span className="text-xl font-black">{p2Info.name}</span>
+                  <span className="text-xs text-white/70">{p2Stats.wpm} WPM • {p2Stats.accuracy}% ACC</span>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* ── CENTER ANNOUNCER TICKER & LEAD METER ── */
+            <div className="flex flex-col items-center gap-2 bg-black/80 border-2 border-yellow-400/50 p-3 rounded-2xl shadow-[0_0_20px_rgba(255,251,0,0.2)]">
+              <span className="text-xs text-yellow-300 font-bold tracking-widest uppercase flex items-center gap-2 font-[family-name:var(--font-arcade)]">
+                <Trophy size={16} /> {tickerMessage}
+              </span>
+
+              {/* WPM Advantage Bar */}
+              <div className="w-full max-w-lg flex items-center gap-3">
+                <span className="text-[10px] text-cyan-400 font-bold">{p1Info.name} ({p1Stats.wpm} WPM)</span>
+                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden flex">
+                  <div 
+                    className="h-full bg-cyan-400 transition-all duration-300" 
+                    style={{ width: `${Math.max(10, Math.min(90, 50 + (wpmDiff * 2)))}%` }} 
+                  />
+                  <div className="h-full bg-pink-500 flex-1 transition-all duration-300" />
+                </div>
+                <span className="text-[10px] text-pink-400 font-bold">{p2Info.name} ({p2Stats.wpm} WPM)</span>
+              </div>
+            </div>
+          )}
 
           {/* ── DUAL PLAYER MONITOR GRID ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
 
             {/* ── HOST / PLAYER 1 PANEL (LEFT) ── */}
-            <div className="relative bg-[#0c0c16] border-2 border-cyan-400/80 p-5 rounded-2xl flex flex-col gap-4 shadow-[0_0_25px_rgba(0,243,255,0.25)]">
+            <div className={`relative bg-[#0c0c16] border-2 ${isFinished && isP1Winner ? 'border-yellow-400 shadow-[0_0_35px_rgba(255,215,0,0.5)]' : 'border-cyan-400/80 shadow-[0_0_25px_rgba(0,243,255,0.25)]'} p-5 rounded-2xl flex flex-col gap-4 transition-all duration-300`}>
               {/* Header */}
               <div className="flex justify-between items-center border-b border-cyan-500/30 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-cyan-400 rounded-full animate-ping" />
+                  <div className={`w-3 h-3 ${isFinished && isP1Winner ? 'bg-yellow-400' : 'bg-cyan-400'} rounded-full animate-ping`} />
                   <span className="text-cyan-400 font-bold text-lg tracking-wider uppercase font-[family-name:var(--font-arcade)]">{p1Info.name}</span>
                 </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-green-400 font-bold">{p1Stats.wpm} WPM</span>
-                  <span className="text-cyan-400">{p1Stats.accuracy}% ACC</span>
-                  <span className="text-yellow-400">×{p1Stats.combo} COMBO</span>
-                </div>
+
+                {isFinished ? (
+                  <div className={`px-3 py-1 rounded-full font-[family-name:var(--font-arcade)] text-xs font-bold tracking-widest animate-pulse ${
+                    isP1Winner 
+                      ? 'bg-yellow-400/20 border border-yellow-400 text-yellow-300 shadow-[0_0_15px_rgba(255,215,0,0.6)]' 
+                      : (isDraw ? 'bg-gray-800 border border-gray-500 text-gray-300' : 'bg-red-950/80 border border-red-500 text-red-400')
+                  }`}>
+                    {isP1Winner ? '👑 WINNER' : (isDraw ? '🤝 DRAW' : '💀 LOSER')}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="text-green-400 font-bold">{p1Stats.wpm} WPM</span>
+                    <span className="text-cyan-400">{p1Stats.accuracy}% ACC</span>
+                    <span className="text-yellow-400">×{p1Stats.combo} COMBO</span>
+                  </div>
+                )}
               </div>
 
               {/* Progress Bar */}
               <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-                <div className="bg-cyan-400 h-full transition-all duration-150 shadow-[0_0_10px_#00f3ff]" style={{ width: `${p1Stats.progress}%` }} />
+                <div className={`${isFinished && isP1Winner ? 'bg-yellow-400 shadow-[0_0_10px_#ffd700]' : 'bg-cyan-400 shadow-[0_0_10px_#00f3ff]'} h-full transition-all duration-150`} style={{ width: `${p1Stats.progress}%` }} />
               </div>
 
               {/* Live Typing Stream */}
@@ -279,23 +342,34 @@ const SpectatePage = () => {
             </div>
 
             {/* ── CHALLENGER / PLAYER 2 PANEL (RIGHT) ── */}
-            <div className="relative bg-[#0c0c16] border-2 border-pink-500/80 p-5 rounded-2xl flex flex-col gap-4 shadow-[0_0_25px_rgba(255,0,127,0.25)]">
+            <div className={`relative bg-[#0c0c16] border-2 ${isFinished && isP2Winner ? 'border-yellow-400 shadow-[0_0_35px_rgba(255,215,0,0.5)]' : 'border-pink-500/80 shadow-[0_0_25px_rgba(255,0,127,0.25)]'} p-5 rounded-2xl flex flex-col gap-4 transition-all duration-300`}>
               {/* Header */}
               <div className="flex justify-between items-center border-b border-pink-500/30 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-pink-500 rounded-full animate-ping" />
+                  <div className={`w-3 h-3 ${isFinished && isP2Winner ? 'bg-yellow-400' : 'bg-pink-500'} rounded-full animate-ping`} />
                   <span className="text-pink-400 font-bold text-lg tracking-wider uppercase font-[family-name:var(--font-arcade)]">{p2Info.name}</span>
                 </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-green-400 font-bold">{p2Stats.wpm} WPM</span>
-                  <span className="text-cyan-400">{p2Stats.accuracy}% ACC</span>
-                  <span className="text-yellow-400">×{p2Stats.combo} COMBO</span>
-                </div>
+
+                {isFinished ? (
+                  <div className={`px-3 py-1 rounded-full font-[family-name:var(--font-arcade)] text-xs font-bold tracking-widest animate-pulse ${
+                    isP2Winner 
+                      ? 'bg-yellow-400/20 border border-yellow-400 text-yellow-300 shadow-[0_0_15px_rgba(255,215,0,0.6)]' 
+                      : (isDraw ? 'bg-gray-800 border border-gray-500 text-gray-300' : 'bg-red-950/80 border border-red-500 text-red-400')
+                  }`}>
+                    {isP2Winner ? '👑 WINNER' : (isDraw ? '🤝 DRAW' : '💀 LOSER')}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="text-green-400 font-bold">{p2Stats.wpm} WPM</span>
+                    <span className="text-cyan-400">{p2Stats.accuracy}% ACC</span>
+                    <span className="text-yellow-400">×{p2Stats.combo} COMBO</span>
+                  </div>
+                )}
               </div>
 
               {/* Progress Bar */}
               <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-                <div className="bg-pink-500 h-full transition-all duration-150 shadow-[0_0_10px_#ff007f]" style={{ width: `${p2Stats.progress}%` }} />
+                <div className={`${isFinished && isP2Winner ? 'bg-yellow-400 shadow-[0_0_10px_#ffd700]' : 'bg-pink-500 shadow-[0_0_10px_#ff007f]'} h-full transition-all duration-150`} style={{ width: `${p2Stats.progress}%` }} />
               </div>
 
               {/* Live Typing Stream */}
