@@ -71,6 +71,7 @@ const BattlePage = () => {
   const [comboMultiplier, setComboMultiplier] = useState(1);
   const [hasShield, setHasShield] = useState(false);
   const [isSuddenDeath, setIsSuddenDeath] = useState(false);
+  const [isCapsLock, setIsCapsLock] = useState(false);
 
   const statsRef = useRef({ totalKeystrokes: 0, errors: 0, wordErrors: 0 });
   const maxComboRef = useRef(0);
@@ -236,7 +237,7 @@ const BattlePage = () => {
     if (activeDebuff && hasShield) {
       setHasShield(false);
       useMatchStore.getState().setActiveDebuff(null);
-      playSound('hover');
+      playVoice('shield');
     }
   }, [activeDebuff, hasShield]);
 
@@ -274,13 +275,18 @@ const BattlePage = () => {
       if (heldPowerUp === 'shield') {
         setHasShield(true);
         setHeldPowerUp(null);
-        playSound('start');
+        playVoice('shield');
         return;
       }
       useMatchStore.getState().sendPowerUp(heldPowerUp);
       if (heldPowerUp === 'steal') {
          setTyped(prev => {
-           let next = prev;
+           // Clean any existing typos first!
+           let cleanIndex = 0;
+           while (cleanIndex < prev.length && prev[cleanIndex] === challengeText[cleanIndex]) {
+             cleanIndex++;
+           }
+           let next = prev.slice(0, cleanIndex);
            let added = 0;
            while (next.length < challengeText.length && added < 15) {
              next += challengeText[next.length];
@@ -305,6 +311,8 @@ const BattlePage = () => {
       setHeldPowerUp(null);
       return;
     }
+
+    if (isCapsLock) return;
 
     if (activeDebuff?.type === 'glitch' || activeDebuff?.type === 'freeze') {
       playSound('error');
@@ -477,6 +485,22 @@ const BattlePage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Track CapsLock state dynamically
+  useEffect(() => {
+    const handleCapsLockCheck = (e) => {
+      if (typeof e.getModifierState === 'function') {
+        setIsCapsLock(e.getModifierState('CapsLock'));
+      }
+    };
+
+    window.addEventListener('keydown', handleCapsLockCheck);
+    window.addEventListener('keyup', handleCapsLockCheck);
+    return () => {
+      window.removeEventListener('keydown', handleCapsLockCheck);
+      window.removeEventListener('keyup', handleCapsLockCheck);
+    };
+  }, []);
+
   // Timer and WPM decay interval
   useEffect(() => {
     let interval;
@@ -609,6 +633,30 @@ const BattlePage = () => {
               <ArcadeText color="red" glow className="text-5xl md:text-7xl text-center">MATCH CANCELLED</ArcadeText>
               <ArcadeText color="pink" className="text-xl tracking-widest text-center">HOST DISCONNECTED</ArcadeText>
               <ArcadeButton color="cyan" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>MAIN MENU</ArcadeButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Caps Lock Warning Lock Screen Overlay */}
+      {isCapsLock && battlePhase === 'playing' && !isPaused && (
+        <div className="absolute inset-0 z-[80] bg-black/90 flex flex-col items-center justify-center backdrop-blur-md pointer-events-auto">
+          <div className="relative border-4 border-yellow-400 p-1 shadow-[0_0_50px_rgba(255,215,0,0.5)]">
+            <div className="absolute -top-2 -left-2 w-4 h-4 bg-yellow-400" />
+            <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400" />
+            <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-yellow-400" />
+            <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-yellow-400" />
+            <div className="border-2 border-black/50 bg-black/95 px-12 md:px-16 py-8 md:py-10 flex flex-col items-center gap-5 text-center">
+              <div className="text-6xl md:text-7xl animate-bounce">🔒</div>
+              <ArcadeText color="yellow" glow className="text-3xl md:text-5xl tracking-widest">
+                CAPS LOCK DETECTED!
+              </ArcadeText>
+              <p className="text-white/90 font-[family-name:var(--font-arcade)] text-sm md:text-base tracking-wider max-w-lg leading-relaxed">
+                PLEASE PRESS <span className="text-yellow-400 font-bold underline">[ CAPS LOCK ]</span> ON YOUR KEYBOARD TO UNLOCK AND CONTINUE TYPING!
+              </p>
+              <div className="px-6 py-2 bg-yellow-400/10 border border-yellow-400/50 rounded-full text-xs text-yellow-300 font-[family-name:var(--font-arcade)] tracking-widest animate-pulse">
+                TYPING IS PAUSED WHILE CAPS LOCK IS ACTIVE
+              </div>
             </div>
           </div>
         </div>

@@ -183,14 +183,14 @@ const MatchResultPage = () => {
           <div className="stat-card px-6 py-3 border border-white/10 bg-white/5 rounded-lg"><ArcadeText color="yellow" glow className="text-2xl md:text-3xl">MAX COMBO ×{maxCombo}</ArcadeText></div>
         </div>
 
-        {/* ── WINNER-ONLY TICKET & AUTO DOWNLOAD PANEL ── */}
+        {/* ── WINNER-ONLY TICKET PANEL (MANUAL DOWNLOAD ONLY) ── */}
         {showTicketOption && (
           <div className="flex flex-col items-center gap-3 my-2 bg-[#0c0c16] border-2 border-[var(--color-neon-cyan)] p-6 rounded-2xl shadow-[0_0_25px_rgba(0,243,255,0.25)] max-w-md w-full">
             <span className="text-yellow-400 font-bold tracking-widest text-xs uppercase flex items-center gap-1.5 font-mono">
               ⚡ BOOTH WINNER TICKET ⚡
             </span>
             <span className="text-white/70 text-xs text-center leading-relaxed">
-              Your official VIP Competition Ticket PNG has been automatically downloaded to your device!
+              Your official VIP Competition Ticket is ready! Click below to view QR code or download your PNG ticket photo.
             </span>
 
             <div className="flex flex-wrap gap-3 justify-center mt-2 w-full">
@@ -201,23 +201,6 @@ const MatchResultPage = () => {
               >
                 <QrCode size={16} /> VIEW QR CODE & TICKET PREVIEW
               </ArcadeButton>
-            </div>
-
-            {/* Hidden/Mounted Ticket Instance for Auto-Download */}
-            <div className="hidden">
-              <BoothTicketCard
-                playerName={playerName || 'PLAYER 1'}
-                opponentName={matchData.opponentName || 'OPPONENT'}
-                winnerName={playerName || 'PLAYER 1'}
-                isDraw={false}
-                myPoints={myPoints}
-                opponentPoints={opponentPoints}
-                wpm={wpm}
-                accuracy={accuracy}
-                maxCombo={maxCombo}
-                matchCode={matchData.matchCode || 'BOOTH-VIP'}
-                autoDownload={true}
-              />
             </div>
           </div>
         )}

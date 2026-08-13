@@ -7,17 +7,24 @@ import VirtualKeyboard from '../components/battle/VirtualKeyboard';
 import ComboDisplay from '../components/battle/ComboDisplay';
 import ArcadeButton from '../components/arcade/ArcadeButton';
 import ArcadeText from '../components/arcade/ArcadeText';
+import DebuffBanner from '../components/battle/DebuffBanner';
 import { useNavigate } from 'react-router-dom';
-import { playSound } from '../lib/sounds';
+import { playSound, playVoice } from '../lib/sounds';
 import typingData from '../data/type_battle_word_data.json';
 
-const generateChallenge = (count = 15) => {
+const generateChallengeWords = (count = 15, category = 'all') => {
   const words = [];
+  const wordList = category === 'all' 
+    ? typingData.all 
+    : (typingData.categories[category] || typingData.all);
+    
   for (let i = 0; i < count; i++) {
-    const randomIndex = Math.floor(Math.random() * typingData.all.length);
-    words.push(typingData.all[randomIndex]);
+    const randomIndex = Math.floor(Math.random() * wordList.length);
+    const word = wordList[randomIndex];
+    const isCursed = Math.random() < 0.22; // ~22% cursed words
+    words.push({ word, type: isCursed ? 'cursed' : 'normal' });
   }
-  return words.join(" ");
+  return words;
 };
 
 const MATCH_DURATION = 60; // 60 seconds match
@@ -25,7 +32,10 @@ const MATCH_DURATION = 60; // 60 seconds match
 const SoloPracticePage = () => {
   const navigate = useNavigate();
   const [category, setCategory] = useState('all');
-  const [challengeText, setChallengeText] = useState(() => generateChallenge(15, 'all'));
+  const [challengeWords, setChallengeWords] = useState(() => generateChallengeWords(15, 'all'));
+  
+  const challengeText = React.useMemo(() => challengeWords.map(w => w.word).join(" "), [challengeWords]);
+
   const [typed, setTyped] = useState('');
   const [startTime, setStartTime] = useState(null);
   const [pressedKey, setPressedKey] = useState(null);
@@ -35,17 +45,114 @@ const SoloPracticePage = () => {
   const [accuracy, setAccuracy] = useState(100);
   const [timeLeft, setTimeLeft] = useState(MATCH_DURATION);
   const [isMatchActive, setIsMatchActive] = useState(false);
-
   const [isPaused, setIsPaused] = useState(false);
+  const [isCapsLock, setIsCapsLock] = useState(false);
+
+  // 💜 Cursed Word State
+  const [cursedTimeLeft, setCursedTimeLeft] = useState(null);
+  const [activeDebuff, setActiveDebuff] = useState(null);
+  const trackedCursedWordIndexRef = useRef(null);
 
   const maxComboRef = useRef(0);
-  const statsRef = useRef({ totalKeystrokes: 0, errors: 0 });
+  const statsRef = useRef({ totalKeystrokes: 0, errors: 0, wordErrors: 0 });
+
+  // Helper to detonate cursed word and apply random debuff
+  const detonateCurse = useCallback(() => {
+    const debuffs = ['glitch', 'blind', 'steal', 'freeze'];
+    const selected = debuffs[Math.floor(Math.random() * debuffs.length)];
+    const duration = selected === 'blind' ? 3500 : 2500;
+    
+    setActiveDebuff({ type: selected, endsAt: Date.now() + duration });
+    playVoice(selected);
+    playSound('error');
+    
+    setCursedTimeLeft(null);
+    trackedCursedWordIndexRef.current = null;
+
+    setTimeout(() => {
+      setActiveDebuff(null);
+    }, duration);
+  }, []);
+
+  // Track CapsLock state dynamically
+  useEffect(() => {
+    const handleCapsLockCheck = (e) => {
+      if (typeof e.getModifierState === 'function') {
+        setIsCapsLock(e.getModifierState('CapsLock'));
+      }
+    };
+
+    window.addEventListener('keydown', handleCapsLockCheck);
+    window.addEventListener('keyup', handleCapsLockCheck);
+    return () => {
+      window.removeEventListener('keydown', handleCapsLockCheck);
+      window.removeEventListener('keyup', handleCapsLockCheck);
+    };
+  }, []);
+
+  // Check cursor position for Cursed Words
+  useEffect(() => {
+    if (!isMatchActive || isPaused || typed.length >= challengeText.length) return;
+
+    const wordIndex = (typed.match(/ /g) || []).length;
+    const currentWordObj = challengeWords[wordIndex];
+
+    if (currentWordObj?.type === 'cursed') {
+      if (trackedCursedWordIndexRef.current !== wordIndex) {
+        trackedCursedWordIndexRef.current = wordIndex;
+        setCursedTimeLeft(4.0);
+        playSound('hover');
+      }
+    } else {
+      if (trackedCursedWordIndexRef.current !== null && trackedCursedWordIndexRef.current < wordIndex) {
+        // Successfully passed cursed word cleanly!
+        playVoice('powerup');
+        setCursedTimeLeft(null);
+        trackedCursedWordIndexRef.current = null;
+      }
+    }
+  }, [typed, challengeWords, challengeText, isMatchActive, isPaused]);
+
+  // Cursed Word Countdown Ticker (decrements by 0.1s every 100ms)
+  useEffect(() => {
+    if (cursedTimeLeft === null || isPaused || !isMatchActive) return;
+
+    const timer = setInterval(() => {
+      setCursedTimeLeft(prev => {
+        if (prev === null) return null;
+        if (prev <= 0.1) {
+          clearInterval(timer);
+          detonateCurse();
+          return null;
+        }
+        return Math.max(0, +(prev - 0.1).toFixed(1));
+      });
+    }, 100);
+
+    return () => clearInterval(timer);
+  }, [cursedTimeLeft, isPaused, isMatchActive, detonateCurse]);
+
+  // Handle Steal Debuff in Solo Mode (Target loses 15 characters)
+  useEffect(() => {
+    if (activeDebuff?.type === 'steal') {
+      playSound('error');
+      setTyped(prev => {
+        let cutIndex = Math.max(0, prev.length - 15);
+        return prev.slice(0, cutIndex);
+      });
+    }
+  }, [activeDebuff]);
 
   const handleKeyDown = useCallback((e) => {
-    // Prevent spacebar from scrolling the page
     if (e.key === ' ') e.preventDefault();
 
     if (isPaused) return;
+    if (isCapsLock) return;
+    if (activeDebuff?.type === 'glitch' || activeDebuff?.type === 'freeze') {
+      playSound('error');
+      return;
+    }
+
     if (e.key.length > 1 && e.key !== 'Backspace') return;
     if (timeLeft <= 0) return;
     if (typed.length >= challengeText.length && e.key !== 'Backspace') return;
@@ -87,12 +194,30 @@ const SoloPracticePage = () => {
       if (nextChar !== expectedChar) {
         playSound('error');
         statsRef.current.errors += 1;
+        statsRef.current.wordErrors += 1;
         newCombo = 0;
+
+        // If typo happens on a cursed word, detonate immediately!
+        const wordIndex = (prev.match(/ /g) || []).length;
+        if (challengeWords[wordIndex]?.type === 'cursed') {
+          detonateCurse();
+        }
       } else {
         playSound('keyPress');
         newCombo = combo + 1;
         maxComboRef.current = Math.max(maxComboRef.current, newCombo);
         if (newCombo > 0 && newCombo % 10 === 0) playSound('combo');
+
+        // Check if finished a word
+        if (nextChar === ' ') {
+          const wordIndex = (prev.match(/ /g) || []).length;
+          if (challengeWords[wordIndex]?.type === 'cursed' && statsRef.current.wordErrors === 0) {
+            playVoice('powerup');
+            setCursedTimeLeft(null);
+            trackedCursedWordIndexRef.current = null;
+          }
+          statsRef.current.wordErrors = 0;
+        }
       }
       setCombo(newCombo);
       
@@ -108,7 +233,7 @@ const SoloPracticePage = () => {
 
       return next;
     });
-  }, [typed, startTime, timeLeft, isPaused, combo]);
+  }, [typed, startTime, timeLeft, isPaused, isCapsLock, activeDebuff, combo, challengeText, challengeWords, detonateCurse]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -170,11 +295,12 @@ const SoloPracticePage = () => {
         });
       }, 1000);
     }
-  }, [typed, navigate, wpm, accuracy]);
+  }, [typed, navigate, wpm, accuracy, challengeText]);
 
   const handleRestart = () => {
     playSound('click');
-    setChallengeText(generateChallenge(15, category));
+    const newWords = generateChallengeWords(15, category);
+    setChallengeWords(newWords);
     setTyped('');
     setStartTime(null);
     setPressedKey(null);
@@ -184,14 +310,18 @@ const SoloPracticePage = () => {
     setTimeLeft(MATCH_DURATION);
     setIsMatchActive(false);
     setIsPaused(false);
-    statsRef.current = { totalKeystrokes: 0, errors: 0 };
+    setCursedTimeLeft(null);
+    setActiveDebuff(null);
+    trackedCursedWordIndexRef.current = null;
+    statsRef.current = { totalKeystrokes: 0, errors: 0, wordErrors: 0 };
     maxComboRef.current = 0;
   };
 
   const handleCategoryChange = (c) => {
     playSound('click');
     setCategory(c);
-    setChallengeText(generateChallenge(15, c));
+    const newWords = generateChallengeWords(15, c);
+    setChallengeWords(newWords);
     setTyped('');
     setStartTime(null);
     setCombo(0);
@@ -199,7 +329,10 @@ const SoloPracticePage = () => {
     setAccuracy(100);
     setTimeLeft(MATCH_DURATION);
     setIsMatchActive(false);
-    statsRef.current = { totalKeystrokes: 0, errors: 0 };
+    setCursedTimeLeft(null);
+    setActiveDebuff(null);
+    trackedCursedWordIndexRef.current = null;
+    statsRef.current = { totalKeystrokes: 0, errors: 0, wordErrors: 0 };
     maxComboRef.current = 0;
   };
 
@@ -215,6 +348,25 @@ const SoloPracticePage = () => {
     <div className="min-h-screen flex flex-col bg-black/50 overflow-hidden p-4 md:p-8 relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,243,255,0.03)_0%,transparent_80%)] pointer-events-none"></div>
       
+      <DebuffBanner activeDebuff={activeDebuff} />
+
+      {/* Caps Lock Warning Lock Screen Overlay */}
+      {isCapsLock && !isPaused && (
+        <div className="absolute inset-0 z-[80] bg-black/90 flex flex-col items-center justify-center backdrop-blur-md pointer-events-auto">
+          <div className="relative border-4 border-yellow-400 p-1 shadow-[0_0_50px_rgba(255,215,0,0.5)]">
+            <div className="border-2 border-black/50 bg-black/95 px-12 md:px-16 py-8 md:py-10 flex flex-col items-center gap-5 text-center">
+              <div className="text-6xl md:text-7xl animate-bounce">🔒</div>
+              <ArcadeText color="yellow" glow className="text-3xl md:text-5xl tracking-widest">
+                CAPS LOCK DETECTED!
+              </ArcadeText>
+              <p className="text-white/90 font-[family-name:var(--font-arcade)] text-sm md:text-base tracking-wider max-w-lg leading-relaxed">
+                PLEASE PRESS <span className="text-yellow-400 font-bold underline">[ CAPS LOCK ]</span> ON YOUR KEYBOARD TO UNLOCK AND CONTINUE TYPING!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pause Modal Overlay */}
       {isPaused && (
         <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
@@ -240,31 +392,48 @@ const SoloPracticePage = () => {
           
           {/* Player Panels Row */}
           <div className="flex justify-between items-center w-full mt-2">
-            <PlayerPanel player="PLAYER 1" name="SOLO" isYou={true} progress={progress} wpm={wpm} color="cyan" />
+            <PlayerPanel player="PLAYER 1" name="SOLO" isYou={true} progress={progress} wpm={wpm} color="cyan" stats={{ progress, wpm, combo }} />
           </div>
         </div>
         
         {/* Main Battle Section */}
-        <div className="flex gap-6 xl:gap-10 w-full items-stretch flex-grow my-8">
-          <div className="w-64 xl:w-72 shrink-0 opacity-0 pointer-events-none hidden md:block"></div>
-          <div className="flex-1 flex flex-col justify-center">
-            <TypingText text={challengeText} typed={typed} />
+        <div className="flex flex-col gap-4 w-full items-center flex-grow my-4">
+          {/* 💜 CURSED WORD ALERT BANNER & COUNTDOWN 💜 */}
+          {cursedTimeLeft !== null && (
+            <div className="flex items-center gap-4 bg-purple-950/90 border-2 border-purple-500 px-6 py-2 rounded-full animate-pulse shadow-[0_0_25px_rgba(168,85,247,0.7)] font-[family-name:var(--font-arcade)]">
+              <span className="text-xl animate-spin">💜</span>
+              <span className="text-purple-300 text-xs md:text-sm tracking-widest font-bold">
+                CURSED WORD DETECTED! TYPE CLEANLY IN {cursedTimeLeft.toFixed(1)}S OR DETONATE!
+              </span>
+              <div className="w-16 bg-black/60 h-2 rounded-full overflow-hidden border border-purple-400">
+                <div 
+                  className="bg-purple-400 h-full transition-all duration-100" 
+                  style={{ width: `${(cursedTimeLeft / 4.0) * 100}%` }} 
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-6 xl:gap-10 w-full items-center justify-center flex-grow">
+            <div className={`flex-1 flex flex-col justify-center max-w-4xl transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-2xl opacity-5 pointer-events-none' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-cyber-glitch' : ''} ${activeDebuff?.type === 'steal' ? 'animate-shake' : ''} ${activeDebuff?.type === 'freeze' ? 'blur-sm grayscale pointer-events-none' : ''}`}>
+              <TypingText text={challengeText} words={challengeWords} typed={typed} combo={combo} />
+            </div>
+            <ComboDisplay combo={combo} best={maxComboRef.current} />
           </div>
-          <ComboDisplay combo={combo} best={combo} />
         </div>
         
         {/* Bottom Section */}
-        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-4 mt-auto pb-4 relative z-30">
+        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-2 mt-auto pb-4 relative z-30">
           <StatsPanel 
             wpm={wpm.toString()} 
             accuracy={`${accuracy}%`} 
             chars={`${typed.length}/${challengeText.length}`} 
             combo={`×${combo}`} 
           />
-          <VirtualKeyboard pressedKey={pressedKey} />
+          <VirtualKeyboard pressedKey={pressedKey} isGlitched={activeDebuff?.type === 'glitch'} />
 
           {/* Category Selector */}
-          <div className="flex flex-col items-center gap-2 mt-4 opacity-50 hover:opacity-100 transition-opacity">
+          <div className="flex flex-col items-center gap-2 mt-2 opacity-50 hover:opacity-100 transition-opacity">
             <span className="text-[var(--color-neon-pink)] font-[family-name:var(--font-arcade)] text-xs tracking-widest">CATEGORY</span>
             <div className="flex gap-2">
               {['all', 'common', 'it', 'gaming', 'tech', 'fun'].map(c => (

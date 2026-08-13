@@ -87,6 +87,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                       if (item.type === 'tnt') className = "text-red-400 font-bold animate-pulse";
                       else if (item.type === 'sword') className = "text-yellow-300 font-bold";
                       else if (item.type === 'critical') className = "text-amber-300 font-bold animate-critical-word";
+                      else if (item.type === 'cursed') className = "text-purple-400 font-bold animate-pulse [text-shadow:0_0_14px_rgba(168,85,247,0.9)]";
                       else className = "text-white/35";
                     }
                     

@@ -49,6 +49,7 @@ const voiceUrls = {
   'powerup':  new URL('../assets/powerup.mp3',        import.meta.url).href,
   'combo':    new URL('../assets/voice/combo.mp3',    import.meta.url).href,
   'freeze':   new URL('../assets/voice/freeze.mp3',   import.meta.url).href,
+  'shield':   new URL('../assets/voice/shield.mp3',   import.meta.url).href,
 };
 
 export const playVoice = (name) => {
