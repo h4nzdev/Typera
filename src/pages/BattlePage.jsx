@@ -116,9 +116,18 @@ const BattlePage = () => {
     });
   }, [navigate, wpm, accuracy, gameMode, localPoints, opponentPoints]);
 
-  // Handle Ready Handshake
+  // Handle Ready Handshake & Resilient Heartbeat Polling
   useEffect(() => {
     useMatchStore.getState().queryReadyStatus();
+
+    const interval = setInterval(() => {
+      const { localReady, opponentReady } = useMatchStore.getState();
+      if (!opponentReady) {
+        useMatchStore.getState().queryReadyStatus();
+      }
+    }, 600);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {

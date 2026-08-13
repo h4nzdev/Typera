@@ -283,21 +283,20 @@ const useMatchStore = create((set, get) => ({
       })
       .on('broadcast', { event: 'query_ready' }, (payload) => {
         const { myId, roundNumber, localReady, channel } = get();
-        if (payload.payload.id !== myId && localReady && channel) {
-          channel.send({
-            type: 'broadcast',
-            event: 'player_ready',
-            payload: { id: myId, readyRound: roundNumber, isReady: true }
-          });
+        if (payload.payload.id !== myId && channel) {
+          if (localReady) {
+            channel.send({
+              type: 'broadcast',
+              event: 'player_ready',
+              payload: { id: myId, readyRound: roundNumber, isReady: true }
+            });
+          }
         }
       })
       .on('broadcast', { event: 'player_ready' }, (payload) => {
         const myId = get().myId;
-        const currentRound = get().roundNumber || 1;
         if (payload.payload.id !== myId) {
-          if (payload.payload.readyRound === currentRound || payload.payload.isReady) {
-            set({ opponentReady: true });
-          }
+          set({ opponentReady: true });
         }
       })
       .on('broadcast', { event: 'match_setup' }, (payload) => {
@@ -332,7 +331,7 @@ const useMatchStore = create((set, get) => ({
       })
       .on('broadcast', { event: 'stats_update' }, (payload) => {
         if (payload.payload.id !== get().myId) {
-          set({ opponentStats: payload.payload.stats });
+          set({ opponentStats: payload.payload.stats, opponentReady: true });
         }
       })
       .on('broadcast', { event: 'round_winner' }, (payload) => {

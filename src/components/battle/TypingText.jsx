@@ -1,7 +1,6 @@
 import React from 'react';
 
 const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", words = null, typed = null }) => {
-  const textArray = text.split('');
   const activeCharRef = React.useRef(null);
   const containerRef = React.useRef(null);
   
@@ -32,19 +31,25 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
   };
 
   const currentTypedText = typed !== null ? typed : "The quick brown fox jumps";
+  const typedLength = typed !== null ? typed.length : 0;
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      <div className="text-[var(--color-neon-purple)] font-[family-name:var(--font-arcade)] text-xs tracking-[0.2em] uppercase">
-        TYPE THE FOLLOWING
+      <div className="text-[var(--color-neon-purple)] font-[family-name:var(--font-arcade)] text-xs tracking-[0.2em] uppercase flex items-center gap-2">
+        <span className="text-[var(--color-neon-cyan)] animate-pulse">⚡</span>
+        <span>TYPE THE FOLLOWING</span>
+        <span className="text-[var(--color-neon-cyan)] animate-pulse">⚡</span>
       </div>
       
-      {/* Target Text Box */}
+      {/* ── TARGET TEXT CONTAINER WITH ELECTRIC LIGHTNING EFFECTS ── */}
       <div 
         ref={containerRef}
-        className="w-full bg-black/60 border border-[var(--color-neon-purple)] rounded-xl p-6 shadow-[0_0_15px_var(--color-neon-purple-muted)] h-[160px] overflow-hidden relative"
+        className="w-full bg-black/80 border-2 border-[var(--color-neon-purple)] rounded-xl p-6 shadow-[0_0_20px_var(--color-neon-purple-muted)] h-[160px] overflow-hidden relative"
       >
-        <div className="flex flex-wrap gap-x-0.5 gap-y-3 font-[family-name:var(--font-mono)] text-xl md:text-2xl leading-relaxed tracking-wider">
+        {/* Lightning Scanline Overlay */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-neon-cyan)]/15 to-transparent w-full h-full animate-lightning-scan z-0" />
+
+        <div className="flex flex-wrap gap-x-0.5 gap-y-3 font-[family-name:var(--font-mono)] text-xl md:text-2xl leading-relaxed tracking-wider relative z-10">
           {(() => {
             const wordsWithIndices = [];
             let currentIndex = 0;
@@ -58,7 +63,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                 startIndex: currentIndex,
                 isLast: i === arr.length - 1
               });
-              currentIndex += item.word.length + 1; // +1 for the space
+              currentIndex += item.word.length + 1; // +1 for space
             });
 
             return wordsWithIndices.map((item, wordIdx) => {
@@ -70,17 +75,17 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                     const absIndex = item.startIndex + charIdx;
                     const state = getCharState(absIndex);
                     let className = "";
-                    
+                    const isJustTyped = absIndex === typedLength - 1;
                     
                     if (state === 'correct') {
-                      className = "text-[var(--color-neon-green)] animate-pop-fade";
+                      className = `text-[var(--color-neon-green)] drop-shadow-[0_0_8px_#39ff14] ${isJustTyped ? 'animate-lightning-spark inline-block' : 'animate-pop-fade'}`;
                     } else if (state === 'incorrect') {
-                      className = "text-[var(--color-neon-red)] bg-red-900/40";
+                      className = "text-[var(--color-neon-red)] bg-red-950/80 font-black border border-red-500/80 rounded px-[1px] shadow-[0_0_12px_#ff003c]";
                     } else if (state === 'current') {
-                      className = "text-white bg-white/20";
+                      className = "text-black font-extrabold rounded px-1 animate-electric-cursor border border-cyan-300 z-10 scale-110 inline-block";
                     } else {
-                      if (item.type === 'tnt') className = "text-red-500 animate-pulse font-bold drop-shadow-[0_0_5px_red]";
-                      else if (item.type === 'sword') className = "text-yellow-500 font-bold drop-shadow-[0_0_5px_yellow]";
+                      if (item.type === 'tnt') className = "text-red-500 animate-pulse font-bold drop-shadow-[0_0_8px_red]";
+                      else if (item.type === 'sword') className = "text-yellow-500 font-bold drop-shadow-[0_0_8px_yellow]";
                       else className = "text-gray-500";
                     }
                     
@@ -88,7 +93,7 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                       <span 
                         key={absIndex} 
                         ref={state === 'current' ? activeCharRef : null}
-                        className={`px-[1px] relative ${className}`}
+                        className={`px-[1px] relative transition-transform duration-75 ${className}`}
                       >
                         {char}
                       </span>
@@ -100,15 +105,16 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
                     const absIndex = item.startIndex + wordChars.length;
                     const state = getCharState(absIndex);
                     let className = "";
+                    const isJustTyped = absIndex === typedLength - 1;
                     
                     if (state === 'correct') {
-                      className = "text-[var(--color-neon-green)] animate-pop-fade";
+                      className = `text-[var(--color-neon-green)] ${isJustTyped ? 'animate-lightning-spark inline-block' : ''}`;
                     } else if (state === 'incorrect') {
-                      className = "text-[var(--color-neon-red)] bg-red-900/40";
+                      className = "text-[var(--color-neon-red)] bg-red-950/80 font-black border border-red-500/80 rounded shadow-[0_0_12px_#ff003c]";
                     } else if (state === 'current') {
-                      className = "text-white bg-white/20";
+                      className = "text-black font-extrabold rounded px-1 animate-electric-cursor border border-cyan-300 z-10 scale-110 inline-block";
                     } else {
-                      className = "text-transparent"; // Make default space transparent so it doesn't look weird
+                      className = "text-transparent";
                     }
 
                     return (
@@ -128,27 +134,29 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
         </div>
       </div>
 
-      {/* Input Box */}
-      <div className="w-full bg-black/80 border border-gray-600 rounded-xl p-4">
-        <div className="font-[family-name:var(--font-mono)] text-xl md:text-2xl text-white tracking-wider flex items-center min-h-[32px]">
-          {currentTypedText}
-          <span className="w-3 h-6 bg-white animate-pulse ml-1 inline-block"></span>
+      {/* ── LIVE INPUT DISPLAY BOX WITH ELECTRIC AURA ── */}
+      <div className="w-full bg-black/90 border-2 border-[var(--color-neon-cyan)]/60 rounded-xl p-4 shadow-[0_0_20px_rgba(0,243,255,0.3)]">
+        <div className="font-[family-name:var(--font-mono)] text-xl md:text-2xl text-white tracking-wider flex items-center min-h-[32px] overflow-hidden">
+          <span className="text-[var(--color-neon-cyan)] text-glow-cyan drop-shadow-[0_0_8px_#00f3ff]">
+            {currentTypedText}
+          </span>
+          <span className="w-3.5 h-7 bg-[var(--color-neon-cyan)] shadow-[0_0_15px_#00f3ff] animate-pulse ml-1 inline-block shrink-0"></span>
         </div>
       </div>
 
       {/* Legend */}
       <div className="flex items-center gap-6 mt-1 w-full px-4 font-[family-name:var(--font-arcade)] text-[10px] tracking-widest uppercase">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-[var(--color-neon-green)]"></div>
-          <span className="text-[var(--color-neon-green)]">CORRECT</span>
+          <div className="w-2 h-2 bg-[var(--color-neon-green)] shadow-[0_0_6px_#39ff14]"></div>
+          <span className="text-[var(--color-neon-green)]">CORRECT (SPARK)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-[var(--color-neon-red)]"></div>
-          <span className="text-[var(--color-neon-red)]">INCORRECT</span>
+          <div className="w-2 h-2 bg-[var(--color-neon-red)] shadow-[0_0_6px_#ff003c]"></div>
+          <span className="text-[var(--color-neon-red)]">ERROR (SHOCK)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-blue-400"></div>
-          <span className="text-blue-400">CURRENT</span>
+          <div className="w-2 h-2 bg-[var(--color-neon-cyan)] shadow-[0_0_6px_#00f3ff]"></div>
+          <span className="text-[var(--color-neon-cyan)]">CURRENT (PLASMA)</span>
         </div>
       </div>
     </div>
