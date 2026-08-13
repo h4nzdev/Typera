@@ -116,18 +116,13 @@ const BattlePage = () => {
     });
   }, [navigate, wpm, accuracy, gameMode, localPoints, opponentPoints]);
 
-  // ─── SIMPLE READY HANDSHAKE ─────────────────────────────────────────
-  // 1. On mount: mark ourselves ready and broadcast it
-  // 2. Heartbeat: re-broadcast every 300ms until opponent is also ready
-  // 3. When both ready → countdown
+  // ─── READY HANDSHAKE ────────────────────────────────────────────────
+  // Both players must manually press READY button (no auto-ready).
+  // Heartbeat re-broadcasts our ready state every 300ms until opponent confirms.
   useEffect(() => {
-    console.log('[BATTLE] Mounted, calling setLocalReady');
-    useMatchStore.getState().setLocalReady();
-
     const interval = setInterval(() => {
-      const { opponentReady } = useMatchStore.getState();
-      if (!opponentReady) {
-        console.log('[BATTLE] Opponent not ready yet, re-broadcasting...');
+      const { localReady, opponentReady } = useMatchStore.getState();
+      if (localReady && !opponentReady) {
         useMatchStore.getState().pingReady();
       }
     }, 300);
@@ -136,7 +131,6 @@ const BattlePage = () => {
   }, []);
 
   useEffect(() => {
-    console.log('[BATTLE] Ready state changed:', { localReady, opponentReady, battlePhase });
     if (localReady && opponentReady && battlePhase === 'waiting') {
       console.log('[BATTLE] BOTH READY → starting countdown!');
       setBattlePhase('countdown');
