@@ -682,28 +682,120 @@ const BattlePage = () => {
         </div>
       )}
 
-      {/* Ready Overlay */}
+      {/* Ready Overlay with Game Mode Rules & Match Info */}
       {battlePhase === 'waiting' && !isPaused && (
-        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md">
-          {!localReady ? (
-            <div className="relative border-4 border-[var(--color-neon-cyan)] p-1" style={{ boxShadow: '0 0 0 2px #000, 0 0 60px rgba(0,243,255,0.5)' }}>
-              <div className="absolute -top-2 -left-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
-              <div className="absolute -top-2 -right-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
-              <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
-              <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-[var(--color-neon-cyan)]" />
-              <div className="border-2 border-black/50 bg-black/90 px-20 py-12 flex flex-col items-center gap-4">
-                <ArcadeText color="yellow" glow className="text-2xl tracking-widest">PLAYER CONNECTED!</ArcadeText>
-                <ArcadeButton color="cyan" className="text-4xl px-16 py-8 animate-pulse" onClick={setLocalReady}>READY</ArcadeButton>
+        <div className="absolute inset-0 z-50 bg-black/92 flex flex-col items-center justify-center backdrop-blur-md px-4 select-none">
+          <div className="relative border-4 border-cyan-400 p-1 w-full max-w-2xl shadow-[0_0_50px_rgba(0,243,255,0.4)]">
+            {/* Pixel corners */}
+            <div className="absolute -top-2 -left-2 w-4 h-4 bg-cyan-400" />
+            <div className="absolute -top-2 -right-2 w-4 h-4 bg-cyan-400" />
+            <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-cyan-400" />
+            <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-cyan-400" />
+
+            <div className="border-2 border-black/80 bg-black/95 p-6 md:p-8 flex flex-col items-center gap-6">
+              {/* Header Badge */}
+              <div className="flex items-center justify-between w-full border-b-2 border-cyan-500/30 pb-3">
+                <span className="font-[family-name:var(--font-arcade)] text-xs text-cyan-400 tracking-[0.3em]">
+                  ● MATCH BRIEFING & GAME RULES
+                </span>
+                <span className="font-[family-name:var(--font-arcade)] text-xs text-white/50 tracking-wider">
+                  CODE: <span className="text-yellow-400">{matchCode}</span>
+                </span>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-6">
-              <ArcadeText color="pink" glow className="text-3xl animate-pulse">WAITING FOR OPPONENT...</ArcadeText>
-              <div className="w-48 h-2 bg-black border border-[var(--color-neon-pink)] overflow-hidden">
-                <div className="h-full bg-[var(--color-neon-pink)] animate-[scan_1s_linear_infinite]" style={{ width: '40%' }} />
+
+              {/* Mode Title Banner */}
+              <div className="flex flex-col items-center gap-1">
+                <ArcadeText 
+                  as="h1" 
+                  color={gameMode === 'deathmatch' ? 'red' : gameMode === 'classic_booth' ? 'yellow' : 'cyan'} 
+                  glow 
+                  className="text-3xl md:text-4xl text-center tracking-widest"
+                >
+                  {gameMode === 'deathmatch' ? '⚔️ 1V1 DEATHMATCH' : gameMode === 'classic_booth' ? '🎪 BOOTH CHAMPIONSHIP' : '🏁 CLASSIC SPEED RACE'}
+                </ArcadeText>
+                <p className="font-[family-name:var(--font-arcade)] text-xs text-white/70 tracking-wider text-center max-w-md">
+                  {gameMode === 'deathmatch'
+                    ? 'Type accurately to deal damage! Deplete your opponent\'s 1000 HP to 0 HP to dominate the arena!'
+                    : gameMode === 'classic_booth'
+                    ? 'First to 3 round wins claims the official Booth Champion Pass & VIP Ticket!'
+                    : 'Type fastest to reach 100% progress before your opponent or before time expires!'}
+                </p>
               </div>
+
+              {/* Game Rules & Mechanics Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full bg-black/80 border border-white/10 p-4 rounded-xl font-mono text-xs">
+                <div className="flex items-start gap-2">
+                  <span className="text-amber-300 text-sm">⚡</span>
+                  <div>
+                    <span className="text-amber-300 font-bold font-[family-name:var(--font-arcade)] text-[11px] block">CRITICAL WORDS</span>
+                    <span className="text-white/70 text-[10px]">Type glowing words to gain 2x combo boost!</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 text-sm">🛡️</span>
+                  <div>
+                    <span className="text-cyan-400 font-bold font-[family-name:var(--font-arcade)] text-[11px] block">SHIELD POWER-UP</span>
+                    <span className="text-white/70 text-[10px]">Reach 30 combo to gain shield against debuffs!</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <span className="text-red-400 text-sm">💣</span>
+                  <div>
+                    <span className="text-red-400 font-bold font-[family-name:var(--font-arcade)] text-[11px] block">ATTACK DEBUFFS</span>
+                    <span className="text-white/70 text-[10px]">Inflict Freeze ❄, Glitch ⚠, Steal ⚡ or Blind 👁!</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <span className="text-purple-400 text-sm">💜</span>
+                  <div>
+                    <span className="text-purple-400 font-bold font-[family-name:var(--font-arcade)] text-[11px] block">CURSED TRAPS</span>
+                    <span className="text-white/70 text-[10px]">Type clean to cleanse cursed words before detonation!</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Player Connection Status */}
+              <div className="flex items-center justify-around w-full bg-black/60 border border-white/10 py-2 px-4 rounded-lg font-[family-name:var(--font-arcade)] text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-cyan-400">HOST:</span>
+                  <span className="text-white font-bold">{hostPlayer?.playerName || 'PLAYER 1'}</span>
+                </div>
+                <div className="text-white/30">VS</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-pink-400">CHALLENGER:</span>
+                  <span className="text-white font-bold">{challengerPlayer?.playerName || 'PLAYER 2'}</span>
+                </div>
+              </div>
+
+              {/* Ready Button / Waiting Status */}
+              {!localReady ? (
+                <div className="flex flex-col items-center gap-2 w-full pt-2">
+                  <ArcadeButton 
+                    color="cyan" 
+                    className="w-full text-2xl md:text-3xl py-4 animate-pulse" 
+                    onClick={() => { playSound('click'); setLocalReady(); }}
+                  >
+                    ⚔️ READY TO BATTLE ⚔️
+                  </ArcadeButton>
+                  <span className="font-[family-name:var(--font-arcade)] text-[10px] text-yellow-400 tracking-widest animate-pulse">
+                    CLICK WHEN YOU ARE READY TO START THE COUNTDOWN
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3 py-2">
+                  <ArcadeText color="pink" glow className="text-xl md:text-2xl animate-pulse text-center">
+                    ● YOU ARE READY! WAITING FOR OPPONENT...
+                  </ArcadeText>
+                  <div className="w-64 h-2 bg-black border border-pink-500 rounded-full overflow-hidden">
+                    <div className="h-full bg-pink-500 animate-[scan_1s_linear_infinite]" style={{ width: '40%' }} />
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 
