@@ -106,11 +106,12 @@ const MainMenu = () => {
 
   const handleMenuAction = (id) => {
     playSound('click');
-    if (id === 'booth') { setTempName(''); setBoothModeFlow('name'); }
+    if (id === 'booth') {
+      setBoothModeFlow('action');
+    }
     else if (id === 'create') {
       useMatchStore.getState().setGameMode('race');
-      if (!playerName) setShowNameModal(true);
-      else navigate('/create');
+      navigate('/create');
     }
     else if (id === 'join') navigate('/join');
     else if (id === 'spectate') navigate('/spectate');
