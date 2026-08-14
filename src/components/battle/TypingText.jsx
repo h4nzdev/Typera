@@ -8,10 +8,8 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
     if (activeCharRef.current && containerRef.current) {
       const container = containerRef.current;
       const el = activeCharRef.current;
-      container.scrollTo({
-        top: el.offsetTop - container.clientHeight / 2 + 15,
-        behavior: 'smooth'
-      });
+      // Keep active line centered inside the 3-line box
+      container.scrollTop = el.offsetTop - 36;
     }
   }, [typed]);
 
@@ -38,8 +36,8 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
   };
 
   const currentTypedText = typed !== null ? typed : "The quick brown fox jumps";
-  const displayTypedText = currentTypedText.length > 130 
-    ? "..." + currentTypedText.slice(-130) 
+  const displayTypedText = currentTypedText.length > 100 
+    ? "..." + currentTypedText.slice(-100) 
     : currentTypedText;
 
   return (
@@ -48,12 +46,12 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
         TYPE THE FOLLOWING
       </div>
       
-      {/* ── TARGET TEXT CONTAINER WITH SIMPLE ELEGANT LIGHT EFFECT ── */}
+      {/* ── TARGET TEXT CONTAINER (STRICTLY CAPPED AT 3 LINES OF SENTENCES) ── */}
       <div 
         ref={containerRef}
-        className="w-full bg-black/75 border border-cyan-500/30 rounded-xl p-6 shadow-[0_0_20px_rgba(0,243,255,0.1)] h-[160px] overflow-hidden relative"
+        className="w-full bg-black/80 border-2 border-cyan-500/40 rounded-xl p-4 shadow-[0_0_20px_rgba(0,243,255,0.15)] h-[115px] max-h-[115px] min-h-[115px] overflow-hidden relative"
       >
-        <div className="flex flex-wrap gap-x-0.5 gap-y-3 font-[family-name:var(--font-mono)] text-xl md:text-2xl leading-relaxed tracking-wider">
+        <div className="flex flex-wrap gap-x-0.5 gap-y-2 font-[family-name:var(--font-mono)] text-xl md:text-2xl leading-snug tracking-wider">
           {(() => {
             const wordsWithIndices = [];
             let currentIndex = 0;
