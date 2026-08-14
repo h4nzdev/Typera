@@ -685,35 +685,35 @@ const BattlePage = () => {
       {/* Ready Overlay with Game Mode Rules & Match Info */}
       {battlePhase === 'waiting' && !isPaused && (
         <div className="absolute inset-0 z-50 bg-black/92 flex flex-col items-center justify-center backdrop-blur-md px-4 select-none">
-          <div className="relative border-4 border-cyan-400 p-1 w-full max-w-2xl shadow-[0_0_50px_rgba(0,243,255,0.4)]">
+          <div className="relative border-4 border-cyan-400 p-1 w-full max-w-3xl shadow-[0_0_60px_rgba(0,243,255,0.45)]">
             {/* Pixel corners */}
             <div className="absolute -top-2 -left-2 w-4 h-4 bg-cyan-400" />
             <div className="absolute -top-2 -right-2 w-4 h-4 bg-cyan-400" />
             <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-cyan-400" />
             <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-cyan-400" />
 
-            <div className="border-2 border-black/80 bg-black/95 p-6 md:p-8 flex flex-col items-center gap-6">
+            <div className="border-2 border-black/80 bg-black/95 p-6 md:p-10 flex flex-col items-center gap-6">
               {/* Header Badge */}
               <div className="flex items-center justify-between w-full border-b-2 border-cyan-500/30 pb-3">
-                <span className="font-[family-name:var(--font-arcade)] text-xs text-cyan-400 tracking-[0.3em]">
+                <span className="font-[family-name:var(--font-arcade)] text-sm md:text-base text-cyan-400 tracking-[0.3em]">
                   ● MATCH BRIEFING & GAME RULES
                 </span>
-                <span className="font-[family-name:var(--font-arcade)] text-xs text-white/50 tracking-wider">
-                  CODE: <span className="text-yellow-400">{matchCode}</span>
+                <span className="font-[family-name:var(--font-arcade)] text-xs md:text-sm text-white/70 tracking-wider">
+                  CODE: <span className="text-yellow-400 font-bold">{matchCode}</span>
                 </span>
               </div>
 
               {/* Mode Title Banner */}
-              <div className="flex flex-col items-center gap-1">
+              <div className="flex flex-col items-center gap-2">
                 <ArcadeText 
                   as="h1" 
                   color={gameMode === 'deathmatch' ? 'red' : gameMode === 'classic_booth' ? 'yellow' : 'cyan'} 
                   glow 
-                  className="text-3xl md:text-4xl text-center tracking-widest"
+                  className="text-4xl md:text-5xl text-center tracking-widest leading-tight"
                 >
                   {gameMode === 'deathmatch' ? '⚔️ 1V1 DEATHMATCH' : gameMode === 'classic_booth' ? '🎪 BOOTH CHAMPIONSHIP' : '🏁 CLASSIC SPEED RACE'}
                 </ArcadeText>
-                <p className="font-[family-name:var(--font-arcade)] text-xs text-white/70 tracking-wider text-center max-w-md">
+                <p className="font-[family-name:var(--font-arcade)] text-sm md:text-base text-white/90 tracking-wider text-center max-w-xl leading-relaxed">
                   {gameMode === 'deathmatch'
                     ? 'Type accurately to deal damage! Deplete your opponent\'s 1000 HP to 0 HP to dominate the arena!'
                     : gameMode === 'classic_booth'
@@ -722,51 +722,51 @@ const BattlePage = () => {
                 </p>
               </div>
 
-              {/* Game Rules & Mechanics Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full bg-black/80 border border-white/10 p-4 rounded-xl font-mono text-xs">
-                <div className="flex items-start gap-2">
-                  <span className="text-amber-300 text-sm">⚡</span>
+              {/* Game Rules & Mechanics Grid (Enlarged Text & Spacing) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full bg-black/90 border border-white/20 p-5 rounded-xl text-sm leading-normal">
+                <div className="flex items-start gap-3">
+                  <span className="text-amber-300 text-lg">⚡</span>
                   <div>
-                    <span className="text-amber-300 font-bold font-[family-name:var(--font-arcade)] text-[11px] block">CRITICAL WORDS</span>
-                    <span className="text-white/70 text-[10px]">Type glowing words to gain 2x combo boost!</span>
+                    <span className="text-amber-300 font-bold font-[family-name:var(--font-arcade)] text-xs md:text-sm block tracking-wider">CRITICAL WORDS</span>
+                    <span className="text-white/90 text-xs md:text-sm font-mono">Type glowing words to gain 2x combo boost!</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2">
-                  <span className="text-cyan-400 text-sm">🛡️</span>
+                <div className="flex items-start gap-3">
+                  <span className="text-cyan-400 text-lg">🛡️</span>
                   <div>
-                    <span className="text-cyan-400 font-bold font-[family-name:var(--font-arcade)] text-[11px] block">SHIELD POWER-UP</span>
-                    <span className="text-white/70 text-[10px]">Reach 30 combo to gain shield against debuffs!</span>
+                    <span className="text-cyan-400 font-bold font-[family-name:var(--font-arcade)] text-xs md:text-sm block tracking-wider">SHIELD POWER-UP</span>
+                    <span className="text-white/90 text-xs md:text-sm font-mono">Reach 30 combo to gain shield against debuffs!</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2">
-                  <span className="text-red-400 text-sm">💣</span>
+                <div className="flex items-start gap-3">
+                  <span className="text-red-400 text-lg">💣</span>
                   <div>
-                    <span className="text-red-400 font-bold font-[family-name:var(--font-arcade)] text-[11px] block">ATTACK DEBUFFS</span>
-                    <span className="text-white/70 text-[10px]">Inflict Freeze ❄, Glitch ⚠, Steal ⚡ or Blind 👁!</span>
+                    <span className="text-red-400 font-bold font-[family-name:var(--font-arcade)] text-xs md:text-sm block tracking-wider">ATTACK DEBUFFS</span>
+                    <span className="text-white/90 text-xs md:text-sm font-mono">Inflict Freeze ❄, Glitch ⚠, Steal ⚡ or Blind 👁!</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2">
-                  <span className="text-purple-400 text-sm">💜</span>
+                <div className="flex items-start gap-3">
+                  <span className="text-purple-400 text-lg">💜</span>
                   <div>
-                    <span className="text-purple-400 font-bold font-[family-name:var(--font-arcade)] text-[11px] block">CURSED TRAPS</span>
-                    <span className="text-white/70 text-[10px]">Type clean to cleanse cursed words before detonation!</span>
+                    <span className="text-purple-400 font-bold font-[family-name:var(--font-arcade)] text-xs md:text-sm block tracking-wider">CURSED TRAPS</span>
+                    <span className="text-white/90 text-xs md:text-sm font-mono">Type clean to cleanse cursed words before detonation!</span>
                   </div>
                 </div>
               </div>
 
-              {/* Player Connection Status */}
-              <div className="flex items-center justify-around w-full bg-black/60 border border-white/10 py-2 px-4 rounded-lg font-[family-name:var(--font-arcade)] text-xs">
+              {/* Player Connection Status (Enlarged Fonts) */}
+              <div className="flex items-center justify-around w-full bg-black/70 border border-white/20 py-3 px-6 rounded-lg font-[family-name:var(--font-arcade)] text-sm md:text-base">
                 <div className="flex items-center gap-2">
                   <span className="text-cyan-400">HOST:</span>
-                  <span className="text-white font-bold">{hostPlayer?.playerName || 'PLAYER 1'}</span>
+                  <span className="text-white font-bold tracking-widest">{hostPlayer?.playerName || 'PLAYER 1'}</span>
                 </div>
-                <div className="text-white/30">VS</div>
+                <div className="text-white/40 font-bold">VS</div>
                 <div className="flex items-center gap-2">
                   <span className="text-pink-400">CHALLENGER:</span>
-                  <span className="text-white font-bold">{challengerPlayer?.playerName || 'PLAYER 2'}</span>
+                  <span className="text-white font-bold tracking-widest">{challengerPlayer?.playerName || 'PLAYER 2'}</span>
                 </div>
               </div>
 
