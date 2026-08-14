@@ -118,6 +118,30 @@ const MatchLobbyPage = () => {
         maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 80%)'
       }} />
 
+      {/* Not Found overlay */}
+      {status === 'not_found' && (
+        <div className="absolute inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center backdrop-blur-md">
+          <div className="relative border-4 border-yellow-400 p-1" style={{ boxShadow: '0 0 40px rgba(255,215,0,0.5)' }}>
+            <div className="absolute -top-2 -left-2 w-4 h-4 bg-yellow-400" />
+            <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400" />
+            <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-yellow-400" />
+            <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-yellow-400" />
+            <div className="border-2 border-black/60 bg-black/90 p-10 flex flex-col items-center gap-6 text-center">
+              <ArcadeText color="yellow" glow className="text-4xl md:text-5xl text-center">MATCH DOES NOT EXIST</ArcadeText>
+              <p className="text-white/80 font-mono text-sm max-w-md">THE MATCH CODE YOU ENTERED WAS NOT FOUND OR HAS EXPIRED.</p>
+              <div className="flex gap-4">
+                <ArcadeButton color="pink" onClick={() => { useMatchStore.getState().leaveMatch(); navigate('/join'); }}>
+                  ENTER CODE AGAIN
+                </ArcadeButton>
+                <ArcadeButton color="cyan" onClick={() => { useMatchStore.getState().leaveMatch(); navigate('/'); }}>
+                  MAIN MENU
+                </ArcadeButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Cancelled overlay */}
       {status === 'cancelled' && (
         <div className="absolute inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center backdrop-blur-md">

@@ -41,15 +41,16 @@ const BoothTicketCard = ({
     minute: '2-digit'
   });
 
-  const scoreStr = `${myPoints} - ${opponentPoints}`;
+  const scoreStr = `${myPoints}-${opponentPoints}`;
+  const timestamp = Math.floor(Date.now() / 1000);
   const baseUrl = getBaseUrl();
-  const publicTicketUrl = `${baseUrl}/ticket?p1=${encodeURIComponent(playerName)}&p2=${encodeURIComponent(opponentName)}&w=${encodeURIComponent(isDraw ? 'DRAW' : winnerName)}&s=${encodeURIComponent(scoreStr)}&wpm=${wpm}&acc=${accuracy}&c=${maxCombo}&d=${encodeURIComponent(dateStr)}&code=${encodeURIComponent(matchCode)}`;
+  const publicTicketUrl = `${baseUrl}/ticket?p1=${encodeURIComponent(playerName)}&p2=${encodeURIComponent(opponentName)}&w=${encodeURIComponent(isDraw ? 'DRAW' : winnerName)}&s=${scoreStr}&wpm=${wpm}&acc=${accuracy}&c=${maxCombo}&t=${timestamp}&code=${matchCode}`;
 
   useEffect(() => {
     QRCode.toDataURL(publicTicketUrl, {
-      width: 320,
-      margin: 1,
-      errorCorrectionLevel: 'M',
+      width: 360,
+      margin: 2,
+      errorCorrectionLevel: 'L',
       color: {
         dark: '#000000',
         light: '#ffffff'

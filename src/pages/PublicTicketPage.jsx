@@ -16,12 +16,37 @@ const PublicTicketPage = () => {
   const playerName = searchParams.get('p1') || 'PLAYER 1';
   const opponentName = searchParams.get('p2') || 'PLAYER 2';
   const winnerName = searchParams.get('w') || 'PLAYER 1';
-  const scoreStr = searchParams.get('s') || '3 - 0';
+  const rawScore = searchParams.get('s') || '3-0';
+  const scoreStr = rawScore.includes('-') ? rawScore.split('-').join(' - ') : rawScore;
   const wpm = searchParams.get('wpm') || '0';
   const accuracy = searchParams.get('acc') || '100';
   const maxCombo = searchParams.get('c') || '0';
-  const dateStr = searchParams.get('d') || new Date().toLocaleDateString();
+  const rawDateStr = searchParams.get('d');
+  const timestampStr = searchParams.get('t');
   const matchCode = searchParams.get('code') || 'BOOTH-VIP';
+
+  let dateStr = new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  if (rawDateStr) {
+    dateStr = rawDateStr;
+  } else if (timestampStr) {
+    const parsedTime = parseInt(timestampStr, 10);
+    if (!isNaN(parsedTime)) {
+      dateStr = new Date(parsedTime * 1000).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  }
 
   const isDraw = winnerName === 'DRAW' || winnerName === 'DRAW (TIE)';
 

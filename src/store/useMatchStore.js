@@ -183,9 +183,12 @@ const useMatchStore = create((set, get) => ({
   },
 
   initMatch: async (code, isHost) => {
-    const { channel } = get();
+    const { channel, hostTimeoutTimer } = get();
     if (channel) {
       await channel.unsubscribe();
+    }
+    if (hostTimeoutTimer) {
+      clearTimeout(hostTimeoutTimer);
     }
 
     const myId = crypto.randomUUID();
@@ -207,6 +210,8 @@ const useMatchStore = create((set, get) => ({
       channelState: 'CONNECTING', 
       status: 'lobby', 
       players: [], 
+      hostEverSeen: isHost,
+      hostTimeoutTimer: null,
       opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
       localReady: false,
       opponentReady: false,
@@ -215,6 +220,19 @@ const useMatchStore = create((set, get) => ({
       localPoints: 0,
       opponentPoints: 0,
     });
+
+    // If challenger, start a 2.5s timer to verify host presence before declaring room state
+    if (!isHost) {
+      const timer = setTimeout(() => {
+        const { players, hostEverSeen, isHost: currentIsHost } = get();
+        const hasHostNow = players.some(p => p.isHost) || hostEverSeen;
+        if (!currentIsHost && !hasHostNow) {
+          console.log('[MATCH STORE] Host not found after 2.5s timeout -> status: not_found');
+          set({ status: 'not_found' });
+        }
+      }, 2500);
+      set({ hostTimeoutTimer: timer });
+    }
 
     const throttledSend = throttle((stats) => {
       newChannel.send({
@@ -249,17 +267,29 @@ const useMatchStore = create((set, get) => ({
         const hasHost = connectedPlayers.some(p => p.isHost);
         const currentStatus = get().status;
 
+        if (hasHost) {
+          set({ hostEverSeen: true });
+          const timer = get().hostTimeoutTimer;
+          if (timer) {
+            clearTimeout(timer);
+            set({ hostTimeoutTimer: null });
+          }
+          if (currentStatus === 'not_found') {
+            set({ status: 'lobby' });
+          }
+        }
+
         if (connectedPlayers.length < 2) {
             if (currentStatus === 'playing') {
                 set({ status: 'opponent_surrendered' });
-            } else if (currentStatus === 'starting') {
+            } else if (currentStatus === 'starting' && get().hostEverSeen && !hasHost) {
                 set({ status: 'cancelled' });
-            } else if (currentStatus === 'lobby' && !hasHost && !get().isHost) {
+            } else if (currentStatus === 'lobby' && get().hostEverSeen && !hasHost && !get().isHost) {
                 set({ status: 'cancelled' });
             }
         }
         
-        if (connectedPlayers.length === 2 && get().status === 'lobby') {
+        if (connectedPlayers.length === 2 && (get().status === 'lobby' || get().status === 'not_found')) {
            set({ status: 'starting' });
            if (get().isHost) {
              const { category, gameMode, roundNumber } = get();
