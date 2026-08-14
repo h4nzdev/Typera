@@ -4,12 +4,20 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
   const activeCharRef = React.useRef(null);
   const containerRef = React.useRef(null);
   
+  const typedInputRef = React.useRef(null);
+
   React.useEffect(() => {
     if (activeCharRef.current && containerRef.current) {
       const container = containerRef.current;
       const el = activeCharRef.current;
       // Keep active line centered inside the 3-line box
       container.scrollTop = el.offsetTop - 36;
+    }
+  }, [typed]);
+
+  React.useEffect(() => {
+    if (typedInputRef.current) {
+      typedInputRef.current.scrollTop = typedInputRef.current.scrollHeight;
     }
   }, [typed]);
 
@@ -36,9 +44,6 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
   };
 
   const currentTypedText = typed !== null ? typed : "The quick brown fox jumps";
-  const displayTypedText = currentTypedText.length > 100 
-    ? "..." + currentTypedText.slice(-100) 
-    : currentTypedText;
 
   return (
     <div className="flex flex-col items-center gap-3 w-full">
@@ -136,12 +141,13 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
         </div>
       </div>
 
-      {/* ── LIVE INPUT DISPLAY BOX (STRICTLY CAPPED AT 3 LINES OF SENTENCES) ── */}
-      <div className="w-full bg-black/80 border border-cyan-500/40 rounded-xl p-3 shadow-[0_0_15px_rgba(0,243,255,0.12)] h-[90px] max-h-[90px] overflow-hidden relative flex items-end">
-        <div className="font-[family-name:var(--font-mono)] text-lg md:text-xl text-white tracking-wider flex flex-wrap items-center leading-snug w-full overflow-hidden">
-          <span className="text-cyan-300 [text-shadow:0_0_8px_rgba(0,243,255,0.5)] font-bold">
-            {displayTypedText}
-          </span>
+      {/* ── LIVE INPUT DISPLAY BOX (STRICTLY CAPPED AT 3 LINES OF SENTENCES, NO ... PREPENDED) ── */}
+      <div 
+        ref={typedInputRef}
+        className="w-full bg-black/80 border border-cyan-500/40 rounded-xl p-3 shadow-[0_0_15px_rgba(0,243,255,0.12)] h-[80px] max-h-[80px] min-h-[80px] overflow-hidden relative"
+      >
+        <div className="font-[family-name:var(--font-mono)] text-lg md:text-xl text-cyan-300 [text-shadow:0_0_8px_rgba(0,243,255,0.5)] font-bold tracking-wider flex flex-wrap items-center leading-snug w-full">
+          {currentTypedText}
           <span className="w-2.5 h-5 bg-cyan-400/90 shadow-[0_0_8px_#00f3ff] animate-pulse ml-1 inline-block shrink-0"></span>
         </div>
       </div>

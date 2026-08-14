@@ -742,13 +742,13 @@ const BattlePage = () => {
         </div>
       )}
 
-      <div className="w-full mx-auto flex flex-col z-10 h-full flex-grow justify-between max-w-[1800px]">
+      <div className="w-full mx-auto flex flex-col z-10 h-full flex-grow justify-start gap-3 md:gap-4 max-w-[1800px] py-2">
         {/* Top Section */}
-        <div className="flex flex-col gap-6 w-full">
+        <div className="flex flex-col gap-4 w-full">
           <BattleHeader timeLeft={formatTime(timeLeft)} matchCode={matchCode} onPause={() => { playSound('click'); setPaused(true); }} />
           
           {/* Player Panels Row */}
-          <div className="flex justify-between items-center w-full mt-2">
+          <div className="flex justify-between items-center w-full mt-1">
             <PlayerPanel 
                player={hostPlayer?.playerName || "PLAYER 1"} 
                name="HOST" 
@@ -783,7 +783,7 @@ const BattlePage = () => {
         </div>
         
         {/* Main Battle Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr_250px] gap-8 z-10 w-full max-w-[1400px] mx-auto items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr_250px] gap-6 z-10 w-full max-w-[1400px] mx-auto items-start">
           
           {/* Left Panel */}
           <div className="hidden lg:block w-full">
@@ -894,14 +894,14 @@ const BattlePage = () => {
           </div>
 
           {/* Mobile Only: Show Right Panel inline */}
-          <div className="flex lg:hidden flex-col gap-4 items-center mt-8">
+          <div className="flex lg:hidden flex-col gap-4 items-center mt-4">
             <ComboDisplay combo={combo} best={maxComboRef.current} />
             <PowerUpSlot heldPowerUp={heldPowerUp} />
           </div>
         </div>
         
-        {/* Bottom Section */}
-        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-1 mt-2 pb-4 relative z-30">
+        {/* Bottom Section (Stats + Virtual Keyboard - Tight Gap) */}
+        <div className="flex flex-col items-center w-full max-w-6xl mx-auto gap-1 mt-1 pb-2 relative z-30">
           <StatsPanel 
             wpm={wpm.toString()} 
             accuracy={`${accuracy}%`} 
