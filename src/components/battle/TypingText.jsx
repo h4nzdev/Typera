@@ -38,6 +38,9 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
   };
 
   const currentTypedText = typed !== null ? typed : "The quick brown fox jumps";
+  const displayTypedText = currentTypedText.length > 130 
+    ? "..." + currentTypedText.slice(-130) 
+    : currentTypedText;
 
   return (
     <div className="flex flex-col items-center gap-3 w-full">
@@ -135,13 +138,13 @@ const TypingText = ({ text = "The quick brown fox jumps over the lazy dog", word
         </div>
       </div>
 
-      {/* ── LIVE INPUT DISPLAY BOX WITH SIMPLE CLEAN LIGHT EFFECT ── */}
-      <div className="w-full bg-black/80 border border-cyan-500/40 rounded-xl p-3.5 shadow-[0_0_15px_rgba(0,243,255,0.12)]">
-        <div className="font-[family-name:var(--font-mono)] text-xl md:text-2xl text-white tracking-wider flex items-center min-h-[30px] overflow-hidden">
-          <span className="text-cyan-300 [text-shadow:0_0_8px_rgba(0,243,255,0.5)]">
-            {currentTypedText}
+      {/* ── LIVE INPUT DISPLAY BOX (STRICTLY CAPPED AT 3 LINES OF SENTENCES) ── */}
+      <div className="w-full bg-black/80 border border-cyan-500/40 rounded-xl p-3 shadow-[0_0_15px_rgba(0,243,255,0.12)] h-[90px] max-h-[90px] overflow-hidden relative flex items-end">
+        <div className="font-[family-name:var(--font-mono)] text-lg md:text-xl text-white tracking-wider flex flex-wrap items-center leading-snug w-full overflow-hidden">
+          <span className="text-cyan-300 [text-shadow:0_0_8px_rgba(0,243,255,0.5)] font-bold">
+            {displayTypedText}
           </span>
-          <span className="w-2.5 h-6 bg-cyan-400/90 shadow-[0_0_8px_#00f3ff] animate-pulse ml-1 inline-block shrink-0"></span>
+          <span className="w-2.5 h-5 bg-cyan-400/90 shadow-[0_0_8px_#00f3ff] animate-pulse ml-1 inline-block shrink-0"></span>
         </div>
       </div>
 

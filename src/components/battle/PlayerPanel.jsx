@@ -73,13 +73,18 @@ const PlayerPanel = ({ player, name, isYou, progress, wpm, color = 'cyan', rever
         </div>
         
         {showHp && (
-          <div className="w-full max-w-[150px] md:max-w-[240px] flex flex-col gap-1 mb-2">
-             <div className="flex justify-between items-center text-[10px] md:text-xs font-[family-name:var(--font-arcade)]">
-                <span className="text-red-400">HP</span>
-                <span className="text-white">{hp}/{maxHp}</span>
+          <div className="w-full max-w-[170px] md:max-w-[260px] flex flex-col gap-1 my-1 bg-red-950/70 border border-red-500/70 p-2 rounded-lg shadow-[0_0_18px_rgba(255,0,60,0.4)]">
+             <div className="flex justify-between items-center text-xs font-[family-name:var(--font-arcade)] font-bold">
+                <span className="text-red-400 flex items-center gap-1 font-extrabold tracking-wider">❤️ HP</span>
+                <span className="text-white bg-black/90 px-2 py-0.5 rounded border border-red-500/50 text-[11px] font-mono">
+                  {Math.max(0, hp)} / {maxHp} <span className="text-red-400 font-bold ml-1">({Math.round(Math.max(0, (hp / maxHp) * 100))}%)</span>
+                </span>
              </div>
-             <div className={`w-full h-2 md:h-3 rounded-sm border overflow-hidden relative transition-colors ${isHit ? 'bg-white border-white animate-shake' : 'bg-red-900/40 border-red-900/50'}`}>
-                <div className={`h-full shadow-[0_0_10px_red] ${isHit ? 'bg-white' : 'bg-red-500'}`} style={{ width: `${Math.max(0, (hp / maxHp) * 100)}%`, transition: 'width 0.3s ease-out' }}></div>
+             <div className={`w-full h-3 md:h-4 rounded border overflow-hidden relative transition-colors ${isHit ? 'bg-white border-white animate-shake' : 'bg-red-950 border-red-700/80'}`}>
+                <div 
+                  className={`h-full shadow-[0_0_15px_#ff003c] transition-all duration-300 ${isHit ? 'bg-white' : 'bg-gradient-to-r from-red-600 via-red-500 to-rose-400'}`} 
+                  style={{ width: `${Math.max(0, Math.min(100, (hp / maxHp) * 100))}%` }} 
+                />
              </div>
           </div>
         )}

@@ -168,14 +168,14 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
         </div>
 
         {showHp && (
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center text-[9px] font-[family-name:var(--font-arcade)]">
-              <span className="text-red-400">HP</span>
-              <span className="text-white">{hp}/{maxHp}</span>
+          <div className="flex flex-col gap-1 bg-red-950/70 border border-red-500/70 p-2 rounded-lg my-1 shadow-[0_0_15px_rgba(255,0,60,0.3)]">
+            <div className="flex justify-between items-center text-[10px] font-[family-name:var(--font-arcade)] font-bold">
+              <span className="text-red-400 flex items-center gap-1">❤️ HP</span>
+              <span className="text-white font-mono">{Math.max(0, hp)} / {maxHp}</span>
             </div>
-            <div className={`w-full h-2 border overflow-hidden transition-colors ${isHit ? 'bg-white border-white' : 'bg-red-900/40 border-red-900/50'}`}>
-              <div className={`h-full ${isHit ? 'bg-white' : 'bg-red-500'} shadow-[0_0_8px_red]`}
-                style={{ width: `${Math.max(0, (hp / maxHp) * 100)}%`, transition: 'width 0.3s ease-out' }} />
+            <div className={`w-full h-3 border rounded overflow-hidden transition-colors ${isHit ? 'bg-white border-white' : 'bg-red-950 border-red-700/80'}`}>
+              <div className={`h-full ${isHit ? 'bg-white' : 'bg-gradient-to-r from-red-600 to-rose-400'} shadow-[0_0_12px_#ff003c]`}
+                style={{ width: `${Math.max(0, Math.min(100, (hp / maxHp) * 100))}%`, transition: 'width 0.3s ease-out' }} />
             </div>
           </div>
         )}
