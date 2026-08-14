@@ -7,7 +7,14 @@ import useMatchStore from '../store/useMatchStore';
 import useUserStore from '../store/useUserStore';
 import { playSound } from '../lib/sounds';
 
-const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+const generateCode = () => {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
 
 const PixelPanel = ({ children, color = '#00f3ff', className = '' }) => (
   <div className={`relative border-4 p-1 ${className}`} style={{

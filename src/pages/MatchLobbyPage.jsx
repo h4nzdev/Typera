@@ -80,10 +80,12 @@ const MatchLobbyPage = () => {
   const vsRef = useRef(null);
   const containerRef = useRef(null);
   const [blink, setBlink] = useState(true);
-  const { players, status } = useMatchStore();
+  const { players, status, isHost, hostEverSeen, channelState } = useMatchStore();
 
   const p1 = players.find(p => p.isHost) || null;
   const p2 = players.find(p => !p.isHost) || null;
+
+  const isConnecting = !isHost && !hostEverSeen && status !== 'not_found' && status !== 'cancelled';
 
   useEffect(() => {
     gsap.fromTo(containerRef.current, { opacity: 0 }, { opacity: 1, duration: 0.5 });
@@ -105,7 +107,7 @@ const MatchLobbyPage = () => {
   const isStarting = status === 'starting';
 
   return (
-    <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
+    <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden select-none p-4"
       style={{ background: 'radial-gradient(ellipse at center, rgba(10,0,21,0.4) 0%, rgba(5,5,10,0.72) 100%)' }}>
       {/* Scanlines */}
       <div className="pointer-events-none absolute inset-0 z-50" style={{
@@ -117,6 +119,24 @@ const MatchLobbyPage = () => {
         backgroundSize: '48px 48px',
         maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 80%)'
       }} />
+
+      {/* Connecting To Host Overlay */}
+      {isConnecting && (
+        <div className="absolute inset-0 z-[90] bg-black/90 flex flex-col items-center justify-center backdrop-blur-md">
+          <div className="flex flex-col items-center gap-6 p-8 border-2 border-cyan-400/50 bg-black/80 rounded-2xl shadow-[0_0_40px_rgba(0,243,255,0.3)] max-w-md text-center">
+            <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-[0_0_20px_#00f3ff]" />
+            <ArcadeText color="cyan" glow className="text-2xl md:text-3xl text-center">
+              CONNECTING TO HOST...
+            </ArcadeText>
+            <p className="text-white/70 font-mono text-xs tracking-wider">
+              NEGOTIATING REALTIME WEBSOCKET HANDSHAKE WITH MATCH ROOM
+            </p>
+            <div className="w-48 h-2 bg-black border border-cyan-400 rounded-full overflow-hidden">
+              <div className="h-full bg-cyan-400 animate-[scan_1s_linear_infinite]" style={{ width: '50%' }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Not Found overlay */}
       {status === 'not_found' && (

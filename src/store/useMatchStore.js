@@ -183,12 +183,15 @@ const useMatchStore = create((set, get) => ({
   },
 
   initMatch: async (code, isHost) => {
-    const { channel, hostTimeoutTimer } = get();
+    const { channel, hostTimeoutTimer, hostHeartbeatInterval } = get();
     if (channel) {
       await channel.unsubscribe();
     }
     if (hostTimeoutTimer) {
       clearTimeout(hostTimeoutTimer);
+    }
+    if (hostHeartbeatInterval) {
+      clearInterval(hostHeartbeatInterval);
     }
 
     const myId = crypto.randomUUID();
@@ -212,6 +215,7 @@ const useMatchStore = create((set, get) => ({
       players: [], 
       hostEverSeen: isHost,
       hostTimeoutTimer: null,
+      hostHeartbeatInterval: null,
       opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
       localReady: false,
       opponentReady: false,
@@ -221,17 +225,19 @@ const useMatchStore = create((set, get) => ({
       opponentPoints: 0,
     });
 
-    // If challenger, start a 2.5s timer to verify host presence before declaring room state
-    if (!isHost) {
-      const timer = setTimeout(() => {
-        const { players, hostEverSeen, isHost: currentIsHost } = get();
-        const hasHostNow = players.some(p => p.isHost) || hostEverSeen;
-        if (!currentIsHost && !hasHostNow) {
-          console.log('[MATCH STORE] Host not found after 2.5s timeout -> status: not_found');
-          set({ status: 'not_found' });
+    // If host, set up a 1.5s broadcast heartbeat to announce presence to joining challengers
+    if (isHost) {
+      const hb = setInterval(() => {
+        const activeChan = get().channel;
+        if (activeChan) {
+          activeChan.send({
+            type: 'broadcast',
+            event: 'host_ping',
+            payload: { hostId: myId }
+          });
         }
-      }, 2500);
-      set({ hostTimeoutTimer: timer });
+      }, 1500);
+      set({ hostHeartbeatInterval: hb });
     }
 
     const throttledSend = throttle((stats) => {
@@ -302,9 +308,51 @@ const useMatchStore = create((set, get) => ({
              set({ challengeWords: currentWords });
            }
         }
-        // NO ready checks in presence sync - presence is only for lobby player detection
       })
-      // ─── SIMPLE: receive player_ready → set opponentReady ─────────
+      // ─── Broadcast Handshake & Heartbeat ──────────────────────────────
+      .on('broadcast', { event: 'request_host_handshake' }, () => {
+        if (get().isHost) {
+          const { category, gameMode, roundNumber, challengeWords } = get();
+          newChannel.send({
+            type: 'broadcast',
+            event: 'host_handshake_ack',
+            payload: { hostId: myId, category, gameMode, roundNumber, challengeWords }
+          });
+        }
+      })
+      .on('broadcast', { event: 'host_ping' }, () => {
+        if (!get().isHost) {
+          set({ hostEverSeen: true });
+          const timer = get().hostTimeoutTimer;
+          if (timer) {
+            clearTimeout(timer);
+            set({ hostTimeoutTimer: null });
+          }
+          if (get().status === 'not_found') {
+            set({ status: 'lobby' });
+          }
+        }
+      })
+      .on('broadcast', { event: 'host_handshake_ack' }, (payload) => {
+        if (!get().isHost) {
+          console.log('[HANDSHAKE] Challenger received host_handshake_ack from host');
+          set({ 
+            hostEverSeen: true,
+            challengeWords: payload.payload.challengeWords || get().challengeWords,
+            category: payload.payload.category || 'all',
+            gameMode: payload.payload.gameMode || 'race',
+            roundNumber: payload.payload.roundNumber || 1,
+          });
+          const timer = get().hostTimeoutTimer;
+          if (timer) {
+            clearTimeout(timer);
+            set({ hostTimeoutTimer: null });
+          }
+          if (get().status === 'not_found') {
+            set({ status: 'lobby' });
+          }
+        }
+      })
       .on('broadcast', { event: 'player_ready' }, (payload) => {
         const myId = get().myId;
         if (payload.payload.id !== myId) {
@@ -366,16 +414,41 @@ const useMatchStore = create((set, get) => ({
         if (status === 'SUBSCRIBED') {
           const { playerName } = (await import('../store/useUserStore')).default.getState();
           await newChannel.track({ isHost, joinedAt: Date.now(), playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
+          
+          // If challenger, send host handshake request & start 8.0s connection-aware timeout AFTER subscription!
+          if (!isHost) {
+            newChannel.send({ type: 'broadcast', event: 'request_host_handshake' });
+            
+            // Retry handshake broadcast at 1.0s and 2.5s
+            setTimeout(() => {
+              if (!get().hostEverSeen) newChannel.send({ type: 'broadcast', event: 'request_host_handshake' });
+            }, 1000);
+            setTimeout(() => {
+              if (!get().hostEverSeen) newChannel.send({ type: 'broadcast', event: 'request_host_handshake' });
+            }, 2500);
+
+            const timer = setTimeout(() => {
+              const { players, hostEverSeen, isHost: currentIsHost } = get();
+              const hasHostNow = players.some(p => p.isHost) || hostEverSeen;
+              if (!currentIsHost && !hasHostNow) {
+                console.log('[MATCH STORE] Host not found after 8.0s post-subscription timeout -> status: not_found');
+                set({ status: 'not_found' });
+              }
+            }, 8000);
+            set({ hostTimeoutTimer: timer });
+          }
         }
       });
   },
 
   leaveMatch: async () => {
-    const { channel } = get();
+    const { channel, hostHeartbeatInterval, hostTimeoutTimer } = get();
+    if (hostHeartbeatInterval) clearInterval(hostHeartbeatInterval);
+    if (hostTimeoutTimer) clearTimeout(hostTimeoutTimer);
     if (channel) {
       await channel.unsubscribe();
     }
-    set({ matchCode: null, channel: null, channelState: 'DISCONNECTED', players: [], status: 'lobby', challengeWords: [], roundNumber: 1, _throttledBroadcast: null });
+    set({ matchCode: null, channel: null, channelState: 'DISCONNECTED', players: [], status: 'lobby', challengeWords: [], roundNumber: 1, _throttledBroadcast: null, hostHeartbeatInterval: null, hostTimeoutTimer: null });
   },
 
   resetRound: () => {
