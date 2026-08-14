@@ -48,9 +48,9 @@ const BoothTicketCard = ({
 
   useEffect(() => {
     QRCode.toDataURL(publicTicketUrl, {
-      width: 360,
-      margin: 2,
-      errorCorrectionLevel: 'L',
+      width: 500,
+      margin: 4, // ISO/IEC standard 4-module quiet zone for camera scanners
+      errorCorrectionLevel: 'M',
       color: {
         dark: '#000000',
         light: '#ffffff'
@@ -183,11 +183,21 @@ const BoothTicketCard = ({
           </div>
           
           {qrDataUrl ? (
-            <div className="bg-white p-1.5 rounded-lg border-2 border-cyan-400 shrink-0 shadow-[0_0_10px_rgba(0,243,255,0.4)]">
-              <img src={qrDataUrl} alt="QR Code" className="w-20 h-20 object-contain" />
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <div className="bg-white p-2 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.5)] border-2 border-white">
+                <img src={qrDataUrl} alt="QR Code" className="w-28 h-28 md:w-32 md:h-32 object-contain" />
+              </div>
+              <a 
+                href={publicTicketUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[9px] text-cyan-400 hover:underline tracking-wider font-mono opacity-80"
+              >
+                🔗 OPEN TICKET LINK
+              </a>
             </div>
           ) : (
-            <div className="w-20 h-20 bg-white/10 rounded flex items-center justify-center text-[10px] animate-pulse">
+            <div className="w-28 h-28 bg-white/10 rounded-xl flex items-center justify-center text-[10px] animate-pulse">
               QR CODE...
             </div>
           )}
