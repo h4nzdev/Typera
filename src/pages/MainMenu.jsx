@@ -36,7 +36,7 @@ const MainMenu = () => {
   const { playerName, setPlayerName } = useUserStore();
   const [showNameModal, setShowNameModal] = useState(false);
   const [tempName, setTempName] = useState('');
-  const [boothModeFlow, setBoothModeFlow] = useState(null);
+  const [pendingAction, setPendingAction] = useState(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [blink, setBlink] = useState(true);
 
@@ -56,7 +56,7 @@ const MainMenu = () => {
 
   // Keyboard navigation
   useEffect(() => {
-    if (showNameModal || boothModeFlow) return;
+    if (showNameModal) return;
     const handler = (e) => {
       if (e.key === 'ArrowUp') {
         playSound('hover');
@@ -81,38 +81,30 @@ const MainMenu = () => {
       gsap.fromTo('.mm-coin', { y: -10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, delay: 1, ease: 'bounce.out' });
     }, containerRef);
     return () => ctx.revert();
-  }, [showNameModal, boothModeFlow]);
+  }, [showNameModal]);
 
   const handleSaveName = () => {
     if (tempName.trim().length > 0) {
       setPlayerName(tempName.toUpperCase());
       setShowNameModal(false);
+      
+      if (pendingAction === 'create') {
+        useMatchStore.getState().setGameMode('race');
+        navigate('/create');
+      } else if (pendingAction === 'join') {
+        navigate('/join');
+      }
+      setPendingAction(null);
     }
-  };
-
-  const handleBoothNameSubmit = () => {
-    if (tempName.trim().length > 0) {
-      setPlayerName(tempName.toUpperCase());
-      setBoothModeFlow('action');
-    }
-  };
-
-  const handleBoothAction = (action) => {
-    useMatchStore.getState().setGameMode('classic_booth');
-    setBoothModeFlow(null);
-    navigate(action === 'create' ? '/create' : '/join');
   };
 
   const handleMenuAction = (id) => {
     playSound('click');
-    if (id === 'booth') {
-      setBoothModeFlow('action');
+    if (id === 'create' || id === 'join') {
+      setTempName(playerName || '');
+      setPendingAction(id);
+      setShowNameModal(true);
     }
-    else if (id === 'create') {
-      useMatchStore.getState().setGameMode('race');
-      navigate('/create');
-    }
-    else if (id === 'join') navigate('/join');
     else if (id === 'spectate') navigate('/spectate');
     else if (id === 'practice') navigate('/practice');
     else if (id === 'board') navigate('/leaderboard');
@@ -151,7 +143,7 @@ const MainMenu = () => {
       )}
 
       {/* INSERT COIN marquee — top right */}
-      {!showNameModal && !boothModeFlow && (
+      {!showNameModal && (
         <div className="mm-coin absolute top-6 right-6 z-20 font-[family-name:var(--font-arcade)] text-xs tracking-widest"
           style={{ color: blink ? '#fffb00' : 'transparent', textShadow: blink ? '0 0 12px rgba(255,251,0,0.8)' : 'none', transition: 'color 0.05s, text-shadow 0.05s' }}>
           ► INSERT COIN ◄
@@ -159,7 +151,7 @@ const MainMenu = () => {
       )}
 
       {/* ── Name Entry Modal (Normal) ── */}
-      {showNameModal && !boothModeFlow && (
+      {showNameModal && (
         <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-md p-4">
           <div className="relative border-2 border-[var(--color-neon-cyan)] p-10 flex flex-col items-center gap-6 max-w-sm w-full"
             style={{ boxShadow: '0 0 30px rgba(0,243,255,0.3), inset 0 0 30px rgba(0,243,255,0.05)' }}>
@@ -181,50 +173,8 @@ const MainMenu = () => {
         </div>
       )}
 
-      {/* ── Booth Name Modal ── */}
-      {boothModeFlow === 'name' && (
-        <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-md p-4">
-          <div className="relative border-2 border-[var(--color-neon-yellow)] p-10 flex flex-col items-center gap-6 max-w-sm w-full"
-            style={{ boxShadow: '0 0 30px rgba(255,251,0,0.3), inset 0 0 30px rgba(255,251,0,0.05)' }}>
-            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-[var(--color-neon-yellow)]" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-[var(--color-neon-yellow)]" />
-            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-[var(--color-neon-yellow)]" />
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-[var(--color-neon-yellow)]" />
-            <ArcadeText color="yellow" glow className="text-3xl text-center">BOOTH MODE</ArcadeText>
-            <ArcadeText color="white" className="text-xs tracking-widest text-center">ENTER YOUR NAME FOR THIS MATCH</ArcadeText>
-            <input type="text" maxLength={5} value={tempName}
-              onChange={(e) => setTempName(e.target.value.toUpperCase())}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleBoothNameSubmit(); }}
-              className="bg-black border-b-2 border-[var(--color-neon-yellow)] text-[var(--color-neon-yellow)] px-4 py-2 text-4xl font-[family-name:var(--font-arcade)] uppercase text-center outline-none w-48"
-              placeholder="AAAAA" autoFocus />
-            <ArcadeButton color="yellow" className="w-full" onClick={handleBoothNameSubmit} disabled={!tempName.trim()}>NEXT</ArcadeButton>
-            <ArcadeButton color="white" className="text-xs py-1 w-full" onClick={() => setBoothModeFlow(null)}>CANCEL</ArcadeButton>
-          </div>
-        </div>
-      )}
-
-      {/* ── Booth Action Modal ── */}
-      {boothModeFlow === 'action' && (
-        <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-md p-4">
-          <div className="relative border-2 border-[var(--color-neon-yellow)] p-10 flex flex-col items-center gap-6 max-w-sm w-full"
-            style={{ boxShadow: '0 0 30px rgba(255,251,0,0.3), inset 0 0 30px rgba(255,251,0,0.05)' }}>
-            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-[var(--color-neon-yellow)]" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-[var(--color-neon-yellow)]" />
-            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-[var(--color-neon-yellow)]" />
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-[var(--color-neon-yellow)]" />
-            <ArcadeText color="yellow" glow className="text-3xl text-center">BOOTH MATCH</ArcadeText>
-            <ArcadeText color="white" className="text-xs tracking-widest opacity-60">FIRST TO 3 WINS</ArcadeText>
-            <div className="flex flex-col gap-4 w-full">
-              <ArcadeButton color="cyan" className="w-full" onClick={() => handleBoothAction('create')}>CREATE MATCH</ArcadeButton>
-              <ArcadeButton color="pink" className="w-full" onClick={() => handleBoothAction('join')}>JOIN MATCH</ArcadeButton>
-              <ArcadeButton color="white" className="text-xs py-1 w-full" onClick={() => setBoothModeFlow(null)}>CANCEL</ArcadeButton>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── MAIN MENU ── */}
-      {!showNameModal && !boothModeFlow && (
+      {!showNameModal && (
         <div className="z-10 flex flex-col items-center gap-8 w-full max-w-lg px-4">
 
           {/* Logo */}
