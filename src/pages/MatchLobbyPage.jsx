@@ -98,13 +98,13 @@ const MatchLobbyPage = () => {
   }, []);
 
   useEffect(() => {
-    if (status === 'starting') {
+    if (status === 'starting' || status === 'preparing') {
       const timer = setTimeout(() => navigate('/battle'), 1200);
       return () => clearTimeout(timer);
     }
   }, [status, navigate]);
 
-  const isStarting = status === 'starting';
+  const isStarting = status === 'starting' || status === 'preparing';
 
   return (
     <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden select-none p-4"
