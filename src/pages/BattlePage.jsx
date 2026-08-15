@@ -11,6 +11,7 @@ import ArcadeButton from '../components/arcade/ArcadeButton';
 import PowerUpSlot from '../components/battle/PowerUpSlot';
 import DebuffBanner from '../components/battle/DebuffBanner';
 import ComboBanner from '../components/battle/ComboBanner';
+import TugOfWarOverlay from '../components/battle/TugOfWarOverlay';
 import { useNavigate } from 'react-router-dom';
 import useMatchStore from '../store/useMatchStore';
 import { playSound, playVoice, playBgm } from '../lib/sounds';
@@ -41,7 +42,10 @@ const BattlePage = () => {
     channelState,
     roundNumber,
     allowDebuffs,
-    winnerId
+    winnerId,
+    bossWordState,
+    bossWordTriggered,
+    opponentStrikePulse
   } = useMatchStore();
   
   const hostPlayer = players.find(p => p.isHost);
@@ -72,8 +76,11 @@ const BattlePage = () => {
   const [triggerCombo50, setTriggerCombo50] = useState(0);
   const [comboMultiplier, setComboMultiplier] = useState(1);
   const [hasShield, setHasShield] = useState(false);
-  const [isSuddenDeath, setIsSuddenDeath] = useState(false);
+  const [isSuddenDeath, setIsSuddenDeath] = useState(false); // UI warning
+  const [isTrueSuddenDeath, setIsTrueSuddenDeath] = useState(false); // Overtime logic
+  const [suddenDeathErrors, setSuddenDeathErrors] = useState(0);
   const [isCapsLock, setIsCapsLock] = useState(false);
+  const [overloadEndTime, setOverloadEndTime] = useState(0);
 
   const statsRef = useRef({ totalKeystrokes: 0, errors: 0, wordErrors: 0 });
   const maxComboRef = useRef(0);
@@ -240,6 +247,40 @@ const BattlePage = () => {
     }
   }, [status, battlePhase, endGame]);
 
+  // Handle Boss Word Winner Effect
+  useEffect(() => {
+    if (bossWordWinner !== null && battlePhase === 'playing') {
+       const didIWin = bossWordWinner === isHost;
+       if (didIWin) {
+          playVoice('powerup');
+          setTyped(prev => {
+             const remaining = challengeText.slice(prev.length);
+             const toAdd = remaining.slice(0, 15);
+             const next = prev + toAdd;
+             
+             let correctCount = 0;
+             for (let i = 0; i < next.length; i++) {
+               if (next[i] === challengeText[i]) correctCount++;
+               else break;
+             }
+             const newProgress = Math.min(100, Math.round((correctCount / challengeText.length) * 100)) || 0;
+             
+             // We can't access current wpm easily in this closure safely without it being a dependency,
+             // so we just read from the previous broadcast or omit them.
+             // But actually, we don't want to list them as dependencies because it would re-trigger.
+             // We can use a ref for latest wpm/accuracy/combo/damage if needed, or just let the next keystroke fix it.
+             // It's fine to just use the current closure values if we use refs, but let's just let it be.
+             // For now, we'll just let the next keystroke or interval update the broadcast.
+             useMatchStore.getState().broadcastStats({ progress: newProgress });
+             return next;
+          });
+       } else {
+          playSound('error');
+          triggerShake();
+       }
+    }
+  }, [bossWordWinner, battlePhase, challengeText, isHost, triggerShake]);
+
   // Handle Shield Interceptor for Incoming Debuffs
   useEffect(() => {
     if (activeDebuff && hasShield) {
@@ -274,7 +315,21 @@ const BattlePage = () => {
     }
   }, [activeDebuff, battlePhase, triggerShake, challengeText, wpm, accuracy, combo, broadcastStats]);
 
+  // Handle Overload receiver
+  useEffect(() => {
+    if (opponentStrikePulse && opponentStrikePulse.isOverload) {
+       triggerShake();
+       // we can simulate red flash by setting the shake state or a separate redFlash state
+       // we'll just reuse triggerShake since it's an intense visual effect
+       document.documentElement.style.boxShadow = 'inset 0 0 100px rgba(255,0,0,0.5)';
+       setTimeout(() => document.documentElement.style.boxShadow = 'none', 100);
+    }
+  }, [opponentStrikePulse, triggerShake]);
+
   const handleKeyDown = useCallback((e) => {
+    // If Boss Word is active, let the overlay handle inputs
+    if (bossWordState?.active) return;
+    
     if (status !== 'playing') return; // The authoritative block!
     if (e.key === ' ') e.preventDefault();
 
@@ -337,6 +392,9 @@ const BattlePage = () => {
     setPressedKey(e.key);
     setTimeout(() => setPressedKey(null), 150);
 
+    // Trap word early rejection (if they are frozen/glitched from a trap, this catches it)
+    if (activeDebuff?.type === 'glitch' || activeDebuff?.type === 'freeze') return;
+
     const hasTypos = typed !== challengeText.slice(0, typed.length);
 
     if (e.key === 'Backspace') {
@@ -370,6 +428,42 @@ const BattlePage = () => {
 
       const nextChar = e.key;
       const expectedChar = challengeText[nextIndex];
+
+      const wordsBefore = (prev.match(/ /g) || []).length;
+      const currentWordObj = challengeWords[wordsBefore];
+      const isStartOfWord = prev === '' || prev.endsWith(' ');
+
+      // --- WORM (TRAP WORD) LOGIC ---
+      if (allowDebuffs && currentWordObj?.type === 'trap' && isStartOfWord) {
+         if (e.key === ' ') {
+            // Skip the trap successfully!
+            playSound('powerup');
+            const skipWord = currentWordObj.word;
+            let next = prev + skipWord;
+            // Add trailing space if not the last word
+            if (nextIndex + skipWord.length < challengeText.length) {
+                next += ' ';
+            }
+            
+            let correctCount = 0;
+            for (let i = 0; i < next.length; i++) {
+              if (next[i] === challengeText[i]) correctCount++;
+              else break;
+            }
+            const newProgress = Math.min(100, Math.round((correctCount / challengeText.length) * 100)) || 0;
+            broadcastStats({ progress: newProgress, wpm, accuracy, combo, damageDealt: localDamage });
+            return next;
+         } else if (e.key === expectedChar) {
+            // SPRUNG THE TRAP!
+            playSound('error');
+            triggerShake();
+            setCombo(0);
+            useMatchStore.getState().setActiveDebuff({ type: 'glitch', endsAt: Date.now() + 1500 });
+            statsRef.current.errors += 1;
+            return prev; // Block input
+         }
+      }
+
       let next = prev + nextChar;
       
       let newWpm = wpm;
@@ -382,6 +476,17 @@ const BattlePage = () => {
         statsRef.current.errors += 1;
         statsRef.current.wordErrors += 1;
         newCombo = 0;
+        
+        if (isTrueSuddenDeath) {
+           setSuddenDeathErrors(prev => {
+              const newErrs = prev + 1;
+              if (newErrs >= 3) {
+                 const opp = useMatchStore.getState().players.find(p => p.id !== myId);
+                 if (opp) useMatchStore.getState().finishMatch(opp.id);
+              }
+              return newErrs;
+           });
+        }
       } else {
         playSound('keyPress');
         newCombo = combo + (1 * comboMultiplier);
@@ -389,11 +494,14 @@ const BattlePage = () => {
         if (newCombo > 0 && newCombo % 10 === 0) playSound('combo');
         
         // Broadcast real-time strike impulse to opponent
-        useMatchStore.getState().broadcastKeystrokeStrike(nextChar, newCombo);
+        const isOverloading = overloadEndTime > Date.now();
+        useMatchStore.getState().broadcastKeystrokeStrike(nextChar, newCombo, { isOverload: isOverloading });
 
-        // 50x Combo Banner & Voice Trigger!
-        if (newCombo > 0 && newCombo % 50 === 0) {
+        // 50x Combo Trigger: Overload mode!
+        if (newCombo === 50) {
           setTriggerCombo50(Date.now());
+          setOverloadEndTime(Date.now() + 5000); // 5 seconds of screen shake attacks!
+          playVoice('powerup'); // Or a specific overload sound
         }
 
         // Power-Up Generation (Unlock shield at 30 combo, or random debuffs at 20 combo)
@@ -465,6 +573,11 @@ const BattlePage = () => {
         activeDebuff
       });
       
+      // Boss word trigger (Only Host triggers at 50%+)
+      if (isHost && newProgress >= 50 && !bossWordTriggered && matchCode !== 'SOLO') {
+         useMatchStore.getState().triggerBossWord("TELECOMMUNICATIONS");
+      }
+      
       // Infinite append for deathmatch
       if (gameMode === 'deathmatch' && next.length > challengeText.length - 100) {
          useMatchStore.getState().appendWords(30);
@@ -523,6 +636,17 @@ const BattlePage = () => {
           }
           if (prev <= 1) {
             clearInterval(interval);
+            
+            // True Sudden Death Check
+            if (gameMode === 'race' && !isTrueSuddenDeath) {
+               const finalProgress = Math.min(100, Math.round((typed.length / challengeText.length) * 100)) || 0;
+               if (Math.abs(finalProgress - opponentStats.progress) <= 5) {
+                  setIsTrueSuddenDeath(true);
+                  playVoice('powerup');
+                  return 0; // Freeze timer at 0
+               }
+            }
+
             // Time ran out! Compare progress to decide winner
             let isWinner = false;
             let isDraw = false;
@@ -537,7 +661,6 @@ const BattlePage = () => {
                 endGame(false, false, true);
               }
                 return 0;
-              }
             } else {
               isWinner = myHp > opponentHp;
               isDraw = myHp === opponentHp;
@@ -595,6 +718,13 @@ const BattlePage = () => {
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden p-4 md:p-8 relative" style={{ background: 'radial-gradient(ellipse at center, rgba(10,0,21,0.4) 0%, rgba(5,5,10,0.72) 100%)' }}>
+      {bossWordState?.active && <TugOfWarOverlay />}
+      {isTrueSuddenDeath && (
+        <div className="absolute inset-0 pointer-events-none bg-red-900/20 z-[100] animate-pulse flex flex-col items-center justify-center">
+             <ArcadeText color="red" glow className="text-6xl tracking-widest absolute top-1/4">SUDDEN DEATH</ArcadeText>
+             <p className="text-white mt-8 font-mono text-xl absolute top-1/3">FIRST TO 3 MISTAKES LOSES ({suddenDeathErrors}/3)</p>
+        </div>
+      )}
       {/* Scanlines */}
       <div className="pointer-events-none absolute inset-0 z-50" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)' }} />
       {/* Neon pixel grid */}
@@ -989,7 +1119,7 @@ const BattlePage = () => {
             </div>
 
             <div className={`w-full transition-all duration-300 ${activeDebuff?.type === 'blind' ? 'blur-2xl opacity-5 scale-95 pointer-events-none select-none' : ''} ${activeDebuff?.type === 'glitch' ? 'animate-cyber-glitch scale-[1.02]' : ''} ${activeDebuff?.type === 'steal' ? 'animate-shake border-red-500' : ''} ${activeDebuff?.type === 'freeze' ? 'blur-sm scale-[0.98] grayscale pointer-events-none' : ''}`}>
-              <TypingText text={challengeText} words={challengeWords} typed={typed} combo={combo} />
+              <TypingText text={challengeText} words={challengeWords} typed={typed} combo={combo} activeDebuff={activeDebuff} />
             </div>
           </div>
 

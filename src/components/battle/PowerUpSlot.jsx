@@ -25,8 +25,9 @@ const PowerUpSlot = ({ heldPowerUp }) => {
               {heldPowerUp === 'steal' && '⚡'}
               {heldPowerUp === 'blind' && '👁️'}
               {heldPowerUp === 'glitch' && '👾'}
+              {heldPowerUp === 'memory_wipe' && '🧠'}
               <ArcadeText color={heldPowerUp === 'shield' ? "cyan" : "yellow"} glow className="text-xl">
-                {heldPowerUp}
+                {heldPowerUp.replace('_', ' ')}
               </ArcadeText>
             </div>
             <div className="text-[var(--color-neon-yellow)] text-[10px] font-[family-name:var(--font-arcade)] animate-ping-once tracking-widest">

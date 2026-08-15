@@ -32,6 +32,12 @@ const DEBUFF_CONFIG = {
     glow: 'rgba(0,243,255,0.85)',
     image: freezeBanner,
   },
+  memory_wipe: {
+    label: 'WIPED!',
+    color: '#60a5fa',
+    glow: 'rgba(96,165,250,0.85)',
+    image: blindBanner,
+  },
 };
 
 // Banner shown on YOUR screen when YOU receive a debuff

@@ -19,8 +19,10 @@ const generateChallenge = (count = 15, category = 'all', mode = 'race') => {
       if (rand < 0.05) type = 'tnt';
       else if (rand < 0.15) type = 'sword';
       else if (rand < 0.25) type = 'critical';
+      else if (rand < 0.30) type = 'trap';
     } else {
       if (rand < 0.12) type = 'critical';
+      else if (rand < 0.17) type = 'trap';
     }
     
     words.push({ word, type });
@@ -62,15 +64,18 @@ const useMatchStore = create((set, get) => ({
   localPoints: 0,
   opponentPoints: 0,
   winnerId: null,
+  bossWordState: null, // { word, p1Progress, p2Progress, active }
+  bossWordTriggered: false,
+  bossWordWinner: null, // true if isHost won, false if challenger won
 
   _throttledBroadcast: null,
   _throttledStrikeBroadcast: null,
   _dbSubscription: null,
 
   // High-frequency events go over broadcast
-  broadcastKeystrokeStrike: (char, combo) => {
+  broadcastKeystrokeStrike: (char, combo, options = {}) => {
     const { _throttledStrikeBroadcast } = get();
-    if (_throttledStrikeBroadcast) _throttledStrikeBroadcast(char, combo);
+    if (_throttledStrikeBroadcast) _throttledStrikeBroadcast(char, combo, options);
   },
 
   setActiveDebuff: (debuff) => set({ activeDebuff: debuff }),
@@ -79,11 +84,40 @@ const useMatchStore = create((set, get) => ({
     const { channel } = get();
     if (channel) {
       channel.send({ type: 'broadcast', event: 'match_powerup', payload: { type } });
-      const duration = type === 'blind' ? 3000 : 2000;
+      const duration = (type === 'blind' || type === 'memory_wipe') ? 3000 : 2000;
       set({ opponentDebuff: { type, endsAt: Date.now() + duration } });
       setTimeout(() => {
         if (get().opponentDebuff?.type === type) set({ opponentDebuff: null });
       }, duration);
+    }
+  },
+
+  triggerBossWord: (word) => {
+    const { channel } = get();
+    if (channel) {
+       channel.send({ type: 'broadcast', event: 'boss_word_start', payload: { word } });
+       set({ bossWordState: { word, p1Progress: 0, p2Progress: 0, active: true }, bossWordTriggered: true });
+    }
+  },
+
+  updateBossWordProgress: (progress) => {
+    const { channel, isHost } = get();
+    if (channel) {
+       channel.send({ type: 'broadcast', event: 'boss_word_progress', payload: { progress, isHost } });
+       set(state => ({
+         bossWordState: state.bossWordState ? {
+           ...state.bossWordState,
+           [isHost ? 'p1Progress' : 'p2Progress']: progress
+         } : null
+       }));
+    }
+  },
+
+  winBossWord: () => {
+    const { channel, isHost } = get();
+    if (channel) {
+       channel.send({ type: 'broadcast', event: 'boss_word_win', payload: { isHost } });
+       set({ bossWordState: null, bossWordWinner: isHost });
     }
   },
 
@@ -320,8 +354,28 @@ const useMatchStore = create((set, get) => ({
       })
       .on('broadcast', { event: 'keystroke_hit' }, (payload) => {
         if (payload.payload.id !== get().myId) {
-          set({ opponentStrikePulse: { ts: Date.now(), char: payload.payload.char, combo: payload.payload.combo } });
+          set({ opponentStrikePulse: { ts: Date.now(), char: payload.payload.char, combo: payload.payload.combo, isOverload: payload.payload.options?.isOverload } });
         }
+      })
+      .on('broadcast', { event: 'boss_word_start' }, (payload) => {
+        if (!get().isHost) {
+           set({ bossWordState: { word: payload.payload.word, p1Progress: 0, p2Progress: 0, active: true }, bossWordTriggered: true });
+        }
+      })
+      .on('broadcast', { event: 'boss_word_progress' }, (payload) => {
+         const { isHost: senderIsHost, progress } = payload.payload;
+         if (senderIsHost !== get().isHost) {
+           set(state => ({
+             bossWordState: state.bossWordState ? {
+               ...state.bossWordState,
+               [senderIsHost ? 'p1Progress' : 'p2Progress']: progress
+             } : null
+           }));
+         }
+      })
+      .on('broadcast', { event: 'boss_word_win' }, (payload) => {
+         const { isHost: winnerIsHost } = payload.payload;
+         set({ bossWordState: null, bossWordWinner: winnerIsHost });
       })
       .on('broadcast', { event: 'stats_update' }, (payload) => {
         if (payload.payload.id !== get().myId) {
@@ -361,7 +415,7 @@ const useMatchStore = create((set, get) => ({
   resetRound: async () => {
     const { isHost, matchId, category, gameMode, roundNumber } = get();
     const nextRound = roundNumber + 1;
-    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 } });
+    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 }, bossWordTriggered: false, bossWordState: null, bossWordWinner: null });
     
     if (isHost && matchId) {
       const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
@@ -377,7 +431,7 @@ const useMatchStore = create((set, get) => ({
 
   resetMatch: async () => {
     const { isHost, matchId, category, gameMode } = get();
-    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 }, localPoints: 0, opponentPoints: 0 });
+    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 }, localPoints: 0, opponentPoints: 0, bossWordTriggered: false, bossWordState: null, bossWordWinner: null });
     
     if (isHost && matchId) {
       const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);

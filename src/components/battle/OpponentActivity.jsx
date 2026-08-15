@@ -41,6 +41,14 @@ const DEBUFF_CONFIG = {
     icon: '❄',
     image: freezeBanner,
   },
+  memory_wipe: {
+    label: 'MEMORY WIPE',
+    sub: 'TEXT HIDDEN',
+    color: '#60a5fa',
+    glow: 'rgba(96,165,250,0.9)',
+    icon: '🧠',
+    image: blindBanner,
+  },
 };
 
 const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, color = 'pink', debuff = null, hp, maxHp, showHp = false, allowDebuffs = true }) => {
