@@ -124,6 +124,16 @@ const BattlePage = () => {
   // ─── READY HANDSHAKE ────────────────────────────────────────────────
   // The store now toggles ready via DB RPC. When both are ready, the DB status transitions to 'countdown'.
   useEffect(() => {
+    if (status === 'cancelled') {
+      const t = setTimeout(() => {
+        useMatchStore.getState().leaveMatch();
+        navigate('/');
+      }, 3000);
+      return () => clearTimeout(t);
+    }
+  }, [status, navigate]);
+
+  useEffect(() => {
     if (status === 'countdown' && battlePhase === 'waiting') {
       console.log('[BATTLE] DB reports BOTH READY → starting countdown!');
       setBattlePhase('countdown');
@@ -640,8 +650,9 @@ const BattlePage = () => {
             <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-[var(--color-neon-red)]" />
             <div className="border-2 border-black/50 bg-black/90 px-16 py-10 flex flex-col items-center gap-6">
               <ArcadeText color="red" glow className="text-5xl md:text-7xl text-center">MATCH CANCELLED</ArcadeText>
-              <ArcadeText color="pink" className="text-xl tracking-widest text-center">HOST DISCONNECTED</ArcadeText>
-              <ArcadeButton color="cyan" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>MAIN MENU</ArcadeButton>
+              <ArcadeText color="pink" className="text-xl tracking-widest text-center">OPPONENT DISCONNECTED</ArcadeText>
+              <ArcadeText color="white" className="text-sm tracking-widest text-center opacity-60">RETURNING TO MAIN MENU...</ArcadeText>
+              <ArcadeButton color="cyan" onClick={() => { playSound('click'); useMatchStore.getState().leaveMatch(); navigate('/'); }}>MAIN MENU NOW</ArcadeButton>
             </div>
           </div>
         </div>
