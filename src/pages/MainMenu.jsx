@@ -70,10 +70,10 @@ const MainMenu = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [showNameModal, boothModeFlow, selectedIdx]);
+  }, [showNameModal, selectedIdx]);
 
   useLayoutEffect(() => {
-    if (showNameModal || boothModeFlow) return;
+    if (showNameModal) return;
     const ctx = gsap.context(() => {
       gsap.fromTo('.mm-logo', { y: -60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' });
       gsap.fromTo('.mm-panel', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.5)', delay: 0.3 });
@@ -128,7 +128,7 @@ const MainMenu = () => {
       }} />
 
       {/* Player ID badge — top left */}
-      {!showNameModal && !boothModeFlow && (
+      {!showNameModal && (
         <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
           <div className="border border-[var(--color-neon-cyan)] px-3 py-1 text-xs font-[family-name:var(--font-arcade)] tracking-widest"
             style={{ boxShadow: '0 0 8px rgba(0,243,255,0.3), inset 0 0 8px rgba(0,243,255,0.05)' }}>
