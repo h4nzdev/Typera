@@ -197,7 +197,9 @@ const useMatchStore = create((set, get) => ({
           player1_id: myId,
           player1_name: pName,
           status: 'waiting',
-          challenge_words: initialWords
+          challenge_words: initialWords,
+          game_mode: get().gameMode,
+          category: get().category
        }).select().single();
        
        if (error) throw error;
