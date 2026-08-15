@@ -121,25 +121,13 @@ const BattlePage = () => {
   }, [navigate, wpm, accuracy, gameMode, localPoints, opponentPoints]);
 
   // ─── READY HANDSHAKE ────────────────────────────────────────────────
-  // Both players must manually press READY button (no auto-ready).
-  // Heartbeat re-broadcasts our ready state every 300ms until opponent confirms.
+  // The store now toggles ready via DB RPC. When both are ready, the DB status transitions to 'countdown'.
   useEffect(() => {
-    const interval = setInterval(() => {
-      const { localReady, opponentReady } = useMatchStore.getState();
-      if (localReady && !opponentReady) {
-        useMatchStore.getState().pingReady();
-      }
-    }, 300);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (localReady && opponentReady && battlePhase === 'waiting') {
-      console.log('[BATTLE] BOTH READY → starting countdown!');
+    if (status === 'countdown' && battlePhase === 'waiting') {
+      console.log('[BATTLE] DB reports BOTH READY → starting countdown!');
       setBattlePhase('countdown');
     }
-  }, [localReady, opponentReady, battlePhase]);
+  }, [status, battlePhase]);
 
   // Handle Classic Booth Points & Rounds
   const prevLocalPoints = useRef(localPoints);

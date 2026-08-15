@@ -41,11 +41,12 @@ function throttle(fn, limit) {
 }
 
 const useMatchStore = create((set, get) => ({
+  matchId: null, // the UUID of the match in DB
   matchCode: null,
   isHost: false,
   myId: null,
-  players: [],
-  status: 'lobby', // lobby | starting | playing | finished
+  players: [], // derived from db row: [{ id: player1_id, playerName: player1_name, isHost: true }, { id: player2_id, playerName: player2_name, isHost: false }]
+  status: 'lobby', 
   channel: null,
   channelState: 'DISCONNECTED',
   opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
@@ -58,16 +59,17 @@ const useMatchStore = create((set, get) => ({
   activeDebuff: null,
   opponentDebuff: null,
   opponentStrikePulse: null,
+  localPoints: 0,
+  opponentPoints: 0,
 
-  // Internal throttled senders – replaced each time initMatch runs
   _throttledBroadcast: null,
   _throttledStrikeBroadcast: null,
+  _dbSubscription: null,
 
+  // High-frequency events go over broadcast
   broadcastKeystrokeStrike: (char, combo) => {
     const { _throttledStrikeBroadcast } = get();
-    if (_throttledStrikeBroadcast) {
-      _throttledStrikeBroadcast(char, combo);
-    }
+    if (_throttledStrikeBroadcast) _throttledStrikeBroadcast(char, combo);
   },
 
   setActiveDebuff: (debuff) => set({ activeDebuff: debuff }),
@@ -75,306 +77,180 @@ const useMatchStore = create((set, get) => ({
   sendPowerUp: async (type) => {
     const { channel } = get();
     if (channel) {
-      channel.send({
-        type: 'broadcast',
-        event: 'match_powerup',
-        payload: { type }
-      });
-      
+      channel.send({ type: 'broadcast', event: 'match_powerup', payload: { type } });
       const duration = type === 'blind' ? 3000 : 2000;
       set({ opponentDebuff: { type, endsAt: Date.now() + duration } });
       setTimeout(() => {
-        if (get().opponentDebuff?.type === type) {
-          set({ opponentDebuff: null });
-        }
+        if (get().opponentDebuff?.type === type) set({ opponentDebuff: null });
       }, duration);
     }
   },
 
-  setCategory: (category) => {
-    const { isHost, channel, gameMode, roundNumber } = get();
-    if (!isHost) return;
+  setCategory: async (category) => {
+    const { isHost, matchId, gameMode } = get();
+    if (!isHost || !matchId) return;
     const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
+    
+    // update db directly
+    await supabase.from('matches').update({ category, challenge_words: newWords }).eq('id', matchId);
     set({ category, challengeWords: newWords });
-    if (channel) {
-      channel.send({
-        type: 'broadcast',
-        event: 'match_setup',
-        payload: { challengeWords: newWords, category, gameMode, roundNumber }
-      });
-    }
   },
 
-  setGameMode: (newMode) => {
-    const { isHost, channel, category, roundNumber } = get();
+  setGameMode: async (newMode) => {
+    const { isHost, matchId, category } = get();
+    if (!isHost || !matchId) return;
     const newWords = generateChallenge(newMode === 'deathmatch' ? 30 : 15, category, newMode);
+    
+    await supabase.from('matches').update({ game_mode: newMode, challenge_words: newWords }).eq('id', matchId);
     set({ gameMode: newMode, challengeWords: newWords });
-    if (isHost && channel) {
-      channel.send({
-        type: 'broadcast',
-        event: 'match_setup',
-        payload: { challengeWords: newWords, category, gameMode: newMode, roundNumber }
-      });
-    }
   },
   
-  appendWords: (count = 10) => {
-    const { category, gameMode, challengeWords, channel } = get();
+  appendWords: async (count = 10) => {
+    const { category, gameMode, challengeWords, matchId, isHost } = get();
+    if (!isHost || !matchId) return;
     const newWords = generateChallenge(count, category, gameMode);
     const combined = [...challengeWords, ...newWords];
-    set({ challengeWords: combined });
     
-    if (channel && get().isHost) {
-      channel.send({
-        type: 'broadcast',
-        event: 'match_append_words',
-        payload: { newWords }
-      });
-    }
+    await supabase.from('matches').update({ challenge_words: combined }).eq('id', matchId);
+    set({ challengeWords: combined });
   },
 
   setPaused: async (paused) => {
     set({ isPaused: paused });
     const { channel } = get();
     if (channel) {
-      channel.send({
-        type: 'broadcast',
-        event: 'match_pause',
-        payload: { isPaused: paused }
-      });
+      channel.send({ type: 'broadcast', event: 'match_pause', payload: { isPaused: paused } });
     }
   },
 
-  // ─── SIMPLE READY: just broadcast, no presence, no async ──────────────
-  setLocalReady: () => {
-    const { channel, myId } = get();
+  setLocalReady: async () => {
+    const { matchId, myId } = get();
+    if (!matchId || !myId) return;
+    
+    // We update local state optimistically or wait for db
+    // Waiting for db via subscription is safer, but we can update optimistic flag
     set({ localReady: true });
-    console.log('[READY] setLocalReady called, broadcasting player_ready');
-    if (channel) {
-      channel.send({
-        type: 'broadcast',
-        event: 'player_ready',
-        payload: { id: myId }
-      });
+    try {
+      const { data, error } = await supabase.rpc('toggle_ready', { p_match_id: matchId, p_player_id: myId });
+      if (error) throw error;
+      // The db change will trigger the subscription to update local state fully
+    } catch (err) {
+      console.error('Failed to toggle ready', err);
+      // Revert if error
+      set({ localReady: false });
     }
   },
 
-  // Re-broadcast our ready state (used as heartbeat)
-  pingReady: () => {
-    const { channel, myId, localReady } = get();
-    if (channel && localReady) {
-      channel.send({
-        type: 'broadcast',
-        event: 'player_ready',
-        payload: { id: myId }
-      });
-    }
-  },
+  pingReady: () => { /* No longer needed */ },
 
   clearPresenceReady: async () => {
-    set({ localReady: false, opponentReady: false });
-    const { channel, isHost } = get();
-    if (channel) {
-      try {
-        const { playerName } = (await import('../store/useUserStore')).default.getState();
-        channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
-      } catch(e) {}
-    }
+     // Currently we don't have an un-ready RPC, but we can set local to false
+     set({ localReady: false, opponentReady: false });
+  },
+
+  _handleMatchStateUpdate: (dbMatch) => {
+     const { myId } = get();
+     const players = [];
+     if (dbMatch.player1_id) {
+        players.push({ id: dbMatch.player1_id, playerName: dbMatch.player1_name || 'PLAYER 1', isHost: true });
+     }
+     if (dbMatch.player2_id) {
+        players.push({ id: dbMatch.player2_id, playerName: dbMatch.player2_name || 'PLAYER 2', isHost: false });
+     }
+
+     const isHost = dbMatch.player1_id === myId;
+     const localReady = isHost ? dbMatch.player1_ready : dbMatch.player2_ready;
+     const opponentReady = isHost ? dbMatch.player2_ready : dbMatch.player1_ready;
+
+     set({
+        matchId: dbMatch.id,
+        matchCode: dbMatch.room_code,
+        players,
+        status: dbMatch.status,
+        category: dbMatch.category,
+        gameMode: dbMatch.game_mode,
+        roundNumber: dbMatch.round_number,
+        challengeWords: dbMatch.challenge_words || [],
+        localReady,
+        opponentReady,
+     });
   },
 
   initMatch: async (code, isHost) => {
-    const { channel, hostTimeoutTimer, hostHeartbeatInterval } = get();
-    if (channel) {
-      await channel.unsubscribe();
-    }
-    if (hostTimeoutTimer) {
-      clearTimeout(hostTimeoutTimer);
-    }
-    if (hostHeartbeatInterval) {
-      clearInterval(hostHeartbeatInterval);
-    }
+    const { channel, _dbSubscription } = get();
+    if (channel) await channel.unsubscribe();
+    if (_dbSubscription) await _dbSubscription.unsubscribe();
 
-    const myId = crypto.randomUUID();
+    let { myId } = get();
+    if (!myId) myId = crypto.randomUUID();
 
-    const newChannel = supabase.channel(`match:${code}`, {
-      config: {
-        presence: { key: myId },
-        broadcast: { self: false, ack: false },
-      },
-    });
+    const { playerName } = (await import('../store/useUserStore')).default.getState();
+    const pName = playerName || (isHost ? 'PLAYER 1' : 'PLAYER 2');
 
-    const initialWords = isHost ? generateChallenge(get().gameMode === 'deathmatch' ? 30 : 15, get().category, get().gameMode) : [];
+    let dbMatch = null;
+
+    if (isHost) {
+       // Insert new match
+       const initialWords = generateChallenge(get().gameMode === 'deathmatch' ? 30 : 15, get().category, get().gameMode);
+       const { data, error } = await supabase.from('matches').insert({
+          room_code: code,
+          player1_id: myId,
+          player1_name: pName,
+          status: 'waiting',
+          challenge_words: initialWords
+       }).select().single();
+       
+       if (error) throw error;
+       dbMatch = data;
+    } else {
+       // Challenger uses RPC to join
+       const { data, error } = await supabase.rpc('join_match', { p_room_code: code, p_player2_id: myId, p_player2_name: pName });
+       if (error) {
+          set({ status: 'not_found' }); // Use existing status map, Join page will handle
+          throw error;
+       }
+       dbMatch = data;
+    }
 
     set({ 
-      matchCode: code, 
-      isHost, 
-      myId, 
-      channel: newChannel,
-      channelState: 'CONNECTING', 
-      status: 'lobby', 
-      players: [], 
-      hostEverSeen: isHost,
-      hostTimeoutTimer: null,
-      hostHeartbeatInterval: null,
-      opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
-      localReady: false,
-      opponentReady: false,
-      roundNumber: 1,
-      challengeWords: initialWords,
-      localPoints: 0,
-      opponentPoints: 0,
+       myId,
+       isHost,
+       channelState: 'CONNECTING',
+       opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
+       localPoints: 0,
+       opponentPoints: 0,
+       hostEverSeen: true,
     });
 
-    // If host, set up a 1.5s broadcast heartbeat to announce presence to joining challengers
-    if (isHost) {
-      const hb = setInterval(() => {
-        const activeChan = get().channel;
-        if (activeChan) {
-          activeChan.send({
-            type: 'broadcast',
-            event: 'host_ping',
-            payload: { hostId: myId }
-          });
-        }
-      }, 1500);
-      set({ hostHeartbeatInterval: hb });
-    }
+    get()._handleMatchStateUpdate(dbMatch);
+
+    // Subscribe to DB changes
+    const dbSub = supabase.channel(`db_match:${dbMatch.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `id=eq.${dbMatch.id}` }, (payload) => {
+          if (payload.new) get()._handleMatchStateUpdate(payload.new);
+      })
+      .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+             // Fetch latest to ensure we didn't miss updates
+             const { data } = await supabase.from('matches').select('*').eq('id', dbMatch.id).single();
+             if (data) get()._handleMatchStateUpdate(data);
+          }
+      });
+
+    // Setup high-frequency event channel
+    const newChannel = supabase.channel(`events:${dbMatch.id}`, { config: { broadcast: { self: false, ack: false } } });
 
     const throttledSend = throttle((stats) => {
-      newChannel.send({
-        type: 'broadcast',
-        event: 'stats_update',
-        payload: { id: myId, stats },
-      });
+      newChannel.send({ type: 'broadcast', event: 'stats_update', payload: { id: myId, stats } });
     }, 50);
 
     const throttledStrike = throttle((char, combo) => {
-      newChannel.send({
-        type: 'broadcast',
-        event: 'keystroke_hit',
-        payload: { id: myId, char, combo },
-      });
+      newChannel.send({ type: 'broadcast', event: 'keystroke_hit', payload: { id: myId, char, combo } });
     }, 30);
 
-    set({ _throttledBroadcast: throttledSend, _throttledStrikeBroadcast: throttledStrike });
+    set({ _throttledBroadcast: throttledSend, _throttledStrikeBroadcast: throttledStrike, channel: newChannel, _dbSubscription: dbSub });
 
     newChannel
-      .on('presence', { event: 'sync' }, () => {
-        const state = newChannel.presenceState();
-        const connectedPlayers = [];
-        for (const [key, presences] of Object.entries(state)) {
-           connectedPlayers.push({ id: key, ...presences[0] });
-        }
-        
-        connectedPlayers.sort((a, b) => (a.isHost === b.isHost) ? 0 : a.isHost ? -1 : 1);
-        
-        set({ players: connectedPlayers });
-
-        const hasHost = connectedPlayers.some(p => p.isHost);
-        const currentStatus = get().status;
-
-        if (hasHost) {
-          set({ hostEverSeen: true });
-          const timer = get().hostTimeoutTimer;
-          if (timer) {
-            clearTimeout(timer);
-            set({ hostTimeoutTimer: null });
-          }
-          if (currentStatus === 'not_found') {
-            set({ status: 'lobby' });
-          }
-        }
-
-        if (connectedPlayers.length < 2) {
-            if (currentStatus === 'playing') {
-                set({ status: 'opponent_surrendered' });
-            } else if (currentStatus === 'starting' && get().hostEverSeen && !hasHost) {
-                set({ status: 'cancelled' });
-            } else if (currentStatus === 'lobby' && get().hostEverSeen && !hasHost && !get().isHost) {
-                set({ status: 'cancelled' });
-            }
-        }
-        
-        if (connectedPlayers.length === 2 && (get().status === 'lobby' || get().status === 'not_found')) {
-           set({ status: 'starting' });
-           if (get().isHost) {
-             const { category, gameMode, roundNumber } = get();
-             const currentWords = get().challengeWords.length > 0 ? get().challengeWords : generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
-             newChannel.send({
-               type: 'broadcast',
-               event: 'match_setup',
-               payload: { challengeWords: currentWords, category, gameMode, roundNumber }
-             });
-             set({ challengeWords: currentWords });
-           }
-        }
-      })
-      // ─── Broadcast Handshake & Heartbeat ──────────────────────────────
-      .on('broadcast', { event: 'request_host_handshake' }, () => {
-        if (get().isHost) {
-          const { category, gameMode, roundNumber, challengeWords } = get();
-          newChannel.send({
-            type: 'broadcast',
-            event: 'host_handshake_ack',
-            payload: { hostId: myId, category, gameMode, roundNumber, challengeWords }
-          });
-        }
-      })
-      .on('broadcast', { event: 'host_ping' }, () => {
-        if (!get().isHost) {
-          set({ hostEverSeen: true });
-          const timer = get().hostTimeoutTimer;
-          if (timer) {
-            clearTimeout(timer);
-            set({ hostTimeoutTimer: null });
-          }
-          if (get().status === 'not_found') {
-            set({ status: 'lobby' });
-          }
-        }
-      })
-      .on('broadcast', { event: 'host_handshake_ack' }, (payload) => {
-        if (!get().isHost) {
-          console.log('[HANDSHAKE] Challenger received host_handshake_ack from host');
-          set({ 
-            hostEverSeen: true,
-            challengeWords: payload.payload.challengeWords || get().challengeWords,
-            category: payload.payload.category || 'all',
-            gameMode: payload.payload.gameMode || 'race',
-            roundNumber: payload.payload.roundNumber || 1,
-          });
-          const timer = get().hostTimeoutTimer;
-          if (timer) {
-            clearTimeout(timer);
-            set({ hostTimeoutTimer: null });
-          }
-          if (get().status === 'not_found') {
-            set({ status: 'lobby' });
-          }
-        }
-      })
-      .on('broadcast', { event: 'player_ready' }, (payload) => {
-        const myId = get().myId;
-        if (payload.payload.id !== myId) {
-          console.log('[READY] Received player_ready from opponent, setting opponentReady=true');
-          set({ opponentReady: true });
-        }
-      })
-      .on('broadcast', { event: 'match_setup' }, (payload) => {
-        const nextRound = payload.payload.roundNumber || get().roundNumber || 1;
-        
-        set({ 
-          challengeWords: payload.payload.challengeWords, 
-          category: payload.payload.category || 'all',
-          gameMode: payload.payload.gameMode || 'race',
-          roundNumber: nextRound,
-          localReady: false,
-          opponentReady: false,
-        });
-      })
-      .on('broadcast', { event: 'match_append_words' }, (payload) => {
-        set(state => ({ challengeWords: [...state.challengeWords, ...payload.payload.newWords] }));
-      })
       .on('broadcast', { event: 'match_pause' }, (payload) => {
         set({ isPaused: payload.payload.isPaused });
       })
@@ -384,9 +260,7 @@ const useMatchStore = create((set, get) => ({
         set({ activeDebuff: { type, endsAt: Date.now() + duration } });
         playVoice(type);
         setTimeout(() => {
-          if (get().activeDebuff?.type === type) {
-            set({ activeDebuff: null });
-          }
+          if (get().activeDebuff?.type === type) set({ activeDebuff: null });
         }, duration);
       })
       .on('broadcast', { event: 'keystroke_hit' }, (payload) => {
@@ -401,116 +275,62 @@ const useMatchStore = create((set, get) => ({
       })
       .on('broadcast', { event: 'round_winner' }, (payload) => {
         const winnerId = payload.payload.id;
-        const myId = get().myId;
-        if (winnerId !== myId) {
+        if (winnerId !== get().myId) {
           set((state) => ({ opponentPoints: state.opponentPoints + 1 }));
         }
       })
-      .on('broadcast', { event: 'match_status' }, (payload) => {
-        set({ status: payload.payload.status });
-      })
-      .subscribe(async (status) => {
+      .subscribe((status) => {
         set({ channelState: status });
-        if (status === 'SUBSCRIBED') {
-          const { playerName } = (await import('../store/useUserStore')).default.getState();
-          await newChannel.track({ isHost, joinedAt: Date.now(), playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
-          
-          // If challenger, send host handshake request & start 8.0s connection-aware timeout AFTER subscription!
-          if (!isHost) {
-            newChannel.send({ type: 'broadcast', event: 'request_host_handshake' });
-            
-            // Retry handshake broadcast at 1.0s and 2.5s
-            setTimeout(() => {
-              if (!get().hostEverSeen) newChannel.send({ type: 'broadcast', event: 'request_host_handshake' });
-            }, 1000);
-            setTimeout(() => {
-              if (!get().hostEverSeen) newChannel.send({ type: 'broadcast', event: 'request_host_handshake' });
-            }, 2500);
-
-            const timer = setTimeout(() => {
-              const { players, hostEverSeen, isHost: currentIsHost } = get();
-              const hasHostNow = players.some(p => p.isHost) || hostEverSeen;
-              if (!currentIsHost && !hasHostNow) {
-                console.log('[MATCH STORE] Host not found after 8.0s post-subscription timeout -> status: not_found');
-                set({ status: 'not_found' });
-              }
-            }, 8000);
-            set({ hostTimeoutTimer: timer });
-          }
-        }
       });
   },
 
   leaveMatch: async () => {
-    const { channel, hostHeartbeatInterval, hostTimeoutTimer } = get();
-    if (hostHeartbeatInterval) clearInterval(hostHeartbeatInterval);
-    if (hostTimeoutTimer) clearTimeout(hostTimeoutTimer);
-    if (channel) {
-      await channel.unsubscribe();
-    }
-    set({ matchCode: null, channel: null, channelState: 'DISCONNECTED', players: [], status: 'lobby', challengeWords: [], roundNumber: 1, _throttledBroadcast: null, hostHeartbeatInterval: null, hostTimeoutTimer: null });
+    const { channel, _dbSubscription } = get();
+    if (channel) await channel.unsubscribe();
+    if (_dbSubscription) await _dbSubscription.unsubscribe();
+    set({ 
+       matchId: null, matchCode: null, channel: null, _dbSubscription: null, 
+       channelState: 'DISCONNECTED', players: [], status: 'lobby', 
+       challengeWords: [], roundNumber: 1, _throttledBroadcast: null
+    });
   },
 
-  resetRound: () => {
-    const nextRound = (get().roundNumber || 1) + 1;
-    set({ 
-      roundNumber: nextRound,
-      opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
-      localReady: false,
-      opponentReady: false,
-    });
-    const { isHost, channel, category, gameMode } = get();
-    if (channel) {
-      const resetPresence = async () => {
-        const { playerName } = (await import('../store/useUserStore')).default.getState();
-        channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
-      };
-      resetPresence();
-    }
-    if (isHost && channel) {
+  resetRound: async () => {
+    const { isHost, matchId, category, gameMode, roundNumber } = get();
+    const nextRound = roundNumber + 1;
+    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 } });
+    
+    if (isHost && matchId) {
       const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
-      set({ challengeWords: newWords });
-      channel.send({
-        type: 'broadcast',
-        event: 'match_setup',
-        payload: { challengeWords: newWords, category, gameMode, roundNumber: nextRound }
-      });
+      await supabase.from('matches').update({
+         round_number: nextRound,
+         challenge_words: newWords,
+         player1_ready: false,
+         player2_ready: false,
+         status: 'preparing'
+      }).eq('id', matchId);
     }
   },
 
-  resetMatch: () => {
-    set({ 
-      roundNumber: 1,
-      opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 },
-      localReady: false,
-      opponentReady: false,
-      localPoints: 0,
-      opponentPoints: 0,
-    });
-    const { isHost, channel, category, gameMode } = get();
-    if (channel) {
-      const resetPresence = async () => {
-        const { playerName } = (await import('../store/useUserStore')).default.getState();
-        channel.track({ isHost, playerName: playerName || 'PLAYER', readyRound: 0, isReady: false });
-      };
-      resetPresence();
-    }
-    if (isHost && channel) {
+  resetMatch: async () => {
+    const { isHost, matchId, category, gameMode } = get();
+    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 }, localPoints: 0, opponentPoints: 0 });
+    
+    if (isHost && matchId) {
       const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
-      set({ challengeWords: newWords });
-      channel.send({
-        type: 'broadcast',
-        event: 'match_setup',
-        payload: { challengeWords: newWords, category, gameMode, roundNumber: 1 }
-      });
+      await supabase.from('matches').update({
+         round_number: 1,
+         challenge_words: newWords,
+         player1_ready: false,
+         player2_ready: false,
+         status: 'preparing'
+      }).eq('id', matchId);
     }
   },
 
   broadcastStats: (stats) => {
     const { _throttledBroadcast } = get();
-    if (_throttledBroadcast) {
-      _throttledBroadcast(stats);
-    }
+    if (_throttledBroadcast) _throttledBroadcast(stats);
   },
 
   recordRoundWinner: async (winnerId) => {
@@ -528,14 +348,9 @@ const useMatchStore = create((set, get) => ({
   },
 
   updateMatchStatus: async (newStatus) => {
-    const { channel } = get();
-    set({ status: newStatus });
-    if (channel) {
-      channel.send({
-        type: 'broadcast',
-        event: 'match_status',
-        payload: { status: newStatus },
-      });
+    const { matchId } = get();
+    if (matchId) {
+       await supabase.from('matches').update({ status: newStatus }).eq('id', matchId);
     }
   }
 }));
