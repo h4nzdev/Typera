@@ -98,7 +98,11 @@ const useMatchStore = create((set, get) => ({
 
   setGameMode: async (newMode) => {
     const { isHost, matchId, category } = get();
-    if (!isHost || !matchId) return;
+    if (!matchId) {
+      set({ gameMode: newMode });
+      return;
+    }
+    if (!isHost) return;
     const newWords = generateChallenge(newMode === 'deathmatch' ? 30 : 15, category, newMode);
     
     await supabase.from('matches').update({ game_mode: newMode, challenge_words: newWords }).eq('id', matchId);

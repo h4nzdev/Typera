@@ -161,21 +161,20 @@ const CreateMatchPage = () => {
                   </div>
                 </div>
 
-                {/* Game Mode & Category — hidden for booth */}
-                {gameMode !== 'classic_booth' && (
-                  <div className="w-full flex flex-col gap-4 border-t-2 pt-4" style={{ borderColor: `${modeColor}30` }}>
+                {/* Game Mode & Category */}
+                <div className="w-full flex flex-col gap-4 border-t-2 pt-4" style={{ borderColor: `${modeColor}30` }}>
                     <div>
                       <div className="font-[family-name:var(--font-arcade)] text-xs tracking-widest text-white/40 mb-2 text-center">GAME MODE</div>
                       <div className="flex gap-2">
-                        {['race', 'deathmatch'].map(m => (
+                        {['race', 'classic_booth', 'deathmatch'].map(m => (
                           <button key={m} type="button" onClick={() => { playSound('click'); setGameMode(m); }}
-                            className="flex-1 py-2 font-[family-name:var(--font-arcade)] text-xs tracking-widest transition-all border-2"
+                            className="flex-1 py-2 font-[family-name:var(--font-arcade)] text-[10px] sm:text-xs tracking-widest transition-all border-2"
                             style={{
                               borderColor: gameMode === m ? '#00f3ff' : '#333',
                               color: gameMode === m ? '#00f3ff' : '#555',
                               background: gameMode === m ? 'rgba(0,243,255,0.08)' : 'transparent',
                             }}>
-                            {m.toUpperCase()}
+                            {m === 'classic_booth' ? '3 ROUNDS' : m.toUpperCase()}
                           </button>
                         ))}
                       </div>
@@ -197,7 +196,6 @@ const CreateMatchPage = () => {
                       </div>
                     </div>
                   </div>
-                )}
 
                 {/* Waiting indicator */}
                 <div className="border-t-2 pt-4 w-full flex flex-col items-center gap-4" style={{ borderColor: `${modeColor}30` }}>
