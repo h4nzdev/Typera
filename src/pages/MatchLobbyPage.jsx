@@ -104,6 +104,16 @@ const MatchLobbyPage = () => {
     }
   }, [status, navigate]);
 
+  useEffect(() => {
+    if (status === 'cancelled') {
+      const timer = setTimeout(() => {
+        useMatchStore.getState().leaveMatch();
+        navigate('/');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [status, navigate]);
+
   const isStarting = status === 'starting' || status === 'preparing';
 
   return (
@@ -172,7 +182,7 @@ const MatchLobbyPage = () => {
             <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-red-500" />
             <div className="border-2 border-black/60 bg-black/90 p-10 flex flex-col items-center gap-6">
               <ArcadeText color="red" glow className="text-5xl text-center">MATCH CANCELLED</ArcadeText>
-              <ArcadeText color="pink" className="text-lg text-center">HOST DISCONNECTED</ArcadeText>
+              <ArcadeText color="pink" className="text-lg text-center">OPPONENT LEFT THE MATCH</ArcadeText>
               <ArcadeButton color="cyan" onClick={() => { useMatchStore.getState().leaveMatch(); navigate('/'); }}>
                 MAIN MENU
               </ArcadeButton>

@@ -227,7 +227,11 @@ const useMatchStore = create((set, get) => ({
     // Subscribe to DB changes
     const dbSub = supabase.channel(`db_match:${dbMatch.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `id=eq.${dbMatch.id}` }, (payload) => {
-          if (payload.new) get()._handleMatchStateUpdate(payload.new);
+          if (payload.eventType === 'DELETE') {
+              set({ status: 'cancelled' });
+          } else if (payload.new) {
+              get()._handleMatchStateUpdate(payload.new);
+          }
       })
       .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
@@ -285,13 +289,21 @@ const useMatchStore = create((set, get) => ({
   },
 
   leaveMatch: async () => {
-    const { channel, _dbSubscription } = get();
+    const { channel, _dbSubscription, matchId } = get();
+    if (matchId) {
+      try {
+        await supabase.from('matches').delete().eq('id', matchId);
+      } catch (e) {
+        console.error('Failed to auto-delete room on leave', e);
+      }
+    }
     if (channel) await channel.unsubscribe();
     if (_dbSubscription) await _dbSubscription.unsubscribe();
     set({ 
        matchId: null, matchCode: null, channel: null, _dbSubscription: null, 
        channelState: 'DISCONNECTED', players: [], status: 'lobby', 
-       challengeWords: [], roundNumber: 1, _throttledBroadcast: null
+       challengeWords: [], roundNumber: 1, _throttledBroadcast: null,
+       localReady: false, opponentReady: false
     });
   },
 
