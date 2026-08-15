@@ -40,7 +40,8 @@ const BattlePage = () => {
     players,
     channelState,
     roundNumber,
-    allowDebuffs
+    allowDebuffs,
+    winnerId
   } = useMatchStore();
   
   const hostPlayer = players.find(p => p.isHost);
@@ -131,7 +132,15 @@ const BattlePage = () => {
       }, 3000);
       return () => clearTimeout(t);
     }
-  }, [status, navigate]);
+    
+    // When the match is finished authoritatively by the DB:
+    if (status === 'finished' && winnerId) {
+      if (battlePhase !== 'finished') {
+        const amIWinner = winnerId === myId;
+        endGame(amIWinner, false, false);
+      }
+    }
+  }, [status, winnerId, navigate, myId, battlePhase, endGame]);
 
   useEffect(() => {
     if (status === 'countdown' && battlePhase === 'waiting') {
@@ -266,7 +275,7 @@ const BattlePage = () => {
   }, [activeDebuff, battlePhase, triggerShake, challengeText, wpm, accuracy, combo, broadcastStats]);
 
   const handleKeyDown = useCallback((e) => {
-    // Prevent spacebar from scrolling the page
+    if (status !== 'playing') return; // The authoritative block!
     if (e.key === ' ') e.preventDefault();
 
     if (e.key === 'Enter' && heldPowerUp) {
@@ -465,19 +474,21 @@ const BattlePage = () => {
       const isComplete = next === challengeText || (next.length >= challengeText.length && newProgress >= 100);
       
       if (gameMode === 'race' && isComplete) {
-         const isDraw = opponentStats.progress >= 100;
-         setTimeout(() => endGame(!isDraw, false, isDraw), 200);
+         // I am the winner, claim it in db!
+         useMatchStore.getState().finishMatch(myId);
+         setIsMatchActive(false);
       }
       
       if (gameMode === 'classic_booth' && isComplete) {
-         // I am the winner of the round! Broadcast it. The useEffect will catch it and call endGame.
+         // I am the winner of the round! Broadcast it AND claim in DB
+         useMatchStore.getState().finishMatch(myId);
          useMatchStore.getState().recordRoundWinner(myId);
          setIsMatchActive(false);
       }
       
       return next;
     });
-  }, [typed, startTime, timeLeft, wpm, accuracy, combo, broadcastStats, battlePhase, endGame, isPaused, triggerShake, localDamage, gameMode, challengeWords, challengeText]);
+  }, [typed, startTime, timeLeft, wpm, accuracy, combo, broadcastStats, battlePhase, endGame, isPaused, triggerShake, localDamage, gameMode, challengeWords, challengeText, status, myId]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -520,13 +531,11 @@ const BattlePage = () => {
               isWinner = finalProgress > opponentStats.progress;
               isDraw = finalProgress === opponentStats.progress;
               
-              if (gameMode === 'classic_booth') {
-                if (isWinner && !isDraw) {
-                  useMatchStore.getState().recordRoundWinner(myId);
-                } else if (isDraw) {
-                  // No points for draw, go to result screen anyway
-                  endGame(false, false, true);
-                }
+              if (isWinner && !isDraw) {
+                useMatchStore.getState().finishMatch(myId);
+              } else if (isDraw) {
+                endGame(false, false, true);
+              }
                 return 0;
               }
             } else {

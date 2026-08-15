@@ -61,6 +61,7 @@ const useMatchStore = create((set, get) => ({
   opponentStrikePulse: null,
   localPoints: 0,
   opponentPoints: 0,
+  winnerId: null,
 
   _throttledBroadcast: null,
   _throttledStrikeBroadcast: null,
@@ -163,6 +164,16 @@ const useMatchStore = create((set, get) => ({
      set({ localReady: false, opponentReady: false });
   },
 
+  finishMatch: async (winnerId) => {
+    const { matchId } = get();
+    if (!matchId || !winnerId) return;
+    try {
+      await supabase.rpc('finish_match', { p_match_id: matchId, p_winner_id: winnerId });
+    } catch (err) {
+      console.error('Failed to finish match:', err);
+    }
+  },
+
   _handleMatchStateUpdate: (dbMatch) => {
      const { myId } = get();
      const players = [];
@@ -189,6 +200,7 @@ const useMatchStore = create((set, get) => ({
         challengeWords: dbMatch.challenge_words || [],
         localReady,
         opponentReady,
+        winnerId: dbMatch.winner_id || null,
      });
   },
 
