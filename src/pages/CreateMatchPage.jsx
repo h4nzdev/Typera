@@ -41,7 +41,7 @@ const CreateMatchPage = () => {
   const [isCreating, setIsCreating] = useState(true);
   const [createError, setCreateError] = useState('');
   const { setPlayerName, playerName } = useUserStore();
-  const { initMatch, leaveMatch, status, category, setCategory, gameMode, setGameMode } = useMatchStore();
+  const { initMatch, leaveMatch, status, category, setCategory, gameMode, setGameMode, allowDebuffs, setAllowDebuffs } = useMatchStore();
 
   useEffect(() => {
     gsap.fromTo(containerRef.current, { opacity: 0 }, { opacity: 1, duration: 0.4 });
@@ -191,6 +191,23 @@ const CreateMatchPage = () => {
                               color: category === c ? '#00f3ff' : '#555',
                             }}>
                             {c.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="font-[family-name:var(--font-arcade)] text-xs tracking-widest text-white/40 mb-2 text-center">ALLOW DEBUFFS</div>
+                      <div className="flex gap-2">
+                        {[true, false].map(val => (
+                          <button key={val ? 'on' : 'off'} type="button" onClick={() => { playSound('click'); setAllowDebuffs(val); }}
+                            className="flex-1 py-2 font-[family-name:var(--font-arcade)] text-[10px] sm:text-xs tracking-widest transition-all border-2"
+                            style={{
+                              borderColor: allowDebuffs === val ? (val ? '#00f3ff' : '#ff003c') : '#333',
+                              color: allowDebuffs === val ? (val ? '#00f3ff' : '#ff003c') : '#555',
+                              background: allowDebuffs === val ? (val ? 'rgba(0,243,255,0.08)' : 'rgba(255,0,60,0.08)') : 'transparent',
+                            }}>
+                            {val ? 'ON' : 'OFF'}
                           </button>
                         ))}
                       </div>

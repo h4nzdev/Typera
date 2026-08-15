@@ -39,7 +39,8 @@ const BattlePage = () => {
     myId,
     players,
     channelState,
-    roundNumber
+    roundNumber,
+    allowDebuffs
   } = useMatchStore();
   
   const hostPlayer = players.find(p => p.isHost);
@@ -377,7 +378,7 @@ const BattlePage = () => {
         }
 
         // Power-Up Generation (Unlock shield at 30 combo, or random debuffs at 20 combo)
-        if (newCombo > 0 && (newCombo % 20 === 0 || newCombo % 30 === 0) && !heldPowerUp) {
+        if (allowDebuffs && newCombo > 0 && (newCombo % 20 === 0 || newCombo % 30 === 0) && !heldPowerUp) {
           const types = newCombo % 30 === 0 
             ? ['shield', 'steal', 'freeze'] 
             : ['glitch', 'blind', 'steal', 'freeze', 'shield'];
@@ -720,21 +721,25 @@ const BattlePage = () => {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <span className="text-cyan-400 text-lg">🛡️</span>
-                  <div>
-                    <span className="text-cyan-400 font-bold font-[family-name:var(--font-arcade)] text-xs md:text-sm block tracking-wider">SHIELD POWER-UP</span>
-                    <span className="text-white/90 text-xs md:text-sm font-mono">Reach 30 combo to gain shield against debuffs!</span>
-                  </div>
-                </div>
+                {allowDebuffs && (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <span className="text-cyan-400 text-lg">🛡️</span>
+                      <div>
+                        <span className="text-cyan-400 font-bold font-[family-name:var(--font-arcade)] text-xs md:text-sm block tracking-wider">SHIELD POWER-UP</span>
+                        <span className="text-white/90 text-xs md:text-sm font-mono">Reach 30 combo to gain shield against debuffs!</span>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3">
-                  <span className="text-red-400 text-lg">💣</span>
-                  <div>
-                    <span className="text-red-400 font-bold font-[family-name:var(--font-arcade)] text-xs md:text-sm block tracking-wider">ATTACK DEBUFFS</span>
-                    <span className="text-white/90 text-xs md:text-sm font-mono">Inflict Freeze ❄, Glitch ⚠, Steal ⚡ or Blind 👁!</span>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-red-400 text-lg">💣</span>
+                      <div>
+                        <span className="text-red-400 font-bold font-[family-name:var(--font-arcade)] text-xs md:text-sm block tracking-wider">ATTACK DEBUFFS</span>
+                        <span className="text-white/90 text-xs md:text-sm font-mono">Inflict Freeze ❄, Glitch ⚠, Steal ⚡ or Blind 👁!</span>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="flex items-start gap-3">
                   <span className="text-purple-400 text-lg">💜</span>
@@ -877,6 +882,7 @@ const BattlePage = () => {
               hp={opponentHp}
               maxHp={MAX_HP}
               showHp={gameMode === 'deathmatch'}
+              allowDebuffs={allowDebuffs}
             />
           </div>
 

@@ -43,7 +43,7 @@ const DEBUFF_CONFIG = {
   },
 };
 
-const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, color = 'pink', debuff = null, hp, maxHp, showHp = false }) => {
+const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, color = 'pink', debuff = null, hp, maxHp, showHp = false, allowDebuffs = true }) => {
   const colorClass = color === 'cyan' ? 'text-[var(--color-neon-cyan)]' : 'text-[var(--color-neon-pink)]';
   const bgClass   = color === 'cyan' ? 'bg-[var(--color-neon-cyan)]'   : 'bg-[var(--color-neon-pink)]';
   const borderHex = color === 'cyan' ? '#00f3ff' : '#ff007f';
@@ -68,7 +68,7 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
 
   // Animate the debuff banner when a new debuff arrives
   useEffect(() => {
-    if (!debuff) return;
+    if (!allowDebuffs || !debuff) return;
     if (debuff.type === prevDebuffType.current) return;
     prevDebuffType.current = debuff.type;
 
@@ -100,7 +100,7 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
         { yPercent: -115, opacity: 0, scaleX: 0.85, duration: 0.4, ease: 'power3.in' }
       );
     });
-  }, [debuff]);
+  }, [debuff, allowDebuffs]);
 
   const isSteal  = debuff?.type === 'steal';
   const isBlind  = debuff?.type === 'blind';
@@ -130,7 +130,13 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
       )}
 
       {/* ── DEBUFF BANNER ── */}
-      {activeCfg && debuff && (
+      {(!allowDebuffs) ? (
+        <div className="absolute top-4 left-0 right-0 h-24 pointer-events-none z-20 flex items-center justify-center overflow-hidden">
+           <div className="bg-black/80 border border-white/20 px-6 py-2">
+             <ArcadeText className="text-white/40 text-sm tracking-widest text-center">DEBUFFS OFF</ArcadeText>
+           </div>
+        </div>
+      ) : activeCfg && debuff ? (
         <div
           ref={bannerRef}
           className="absolute inset-x-0 top-1 z-40 origin-top flex justify-center pointer-events-none"
@@ -144,7 +150,7 @@ const OpponentActivity = ({ progress = 0, wpm = 0, accuracy = 100, combo = 0, co
             draggable={false}
           />
         </div>
-      )}
+      ) : null}
 
       {/* Steal full overlay (blocks stats) */}
       {isSteal && (

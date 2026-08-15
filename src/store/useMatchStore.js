@@ -108,6 +108,17 @@ const useMatchStore = create((set, get) => ({
     await supabase.from('matches').update({ game_mode: newMode, challenge_words: newWords }).eq('id', matchId);
     set({ gameMode: newMode, challengeWords: newWords });
   },
+
+  setAllowDebuffs: async (allowed) => {
+    const { isHost, matchId } = get();
+    if (!matchId) {
+      set({ allowDebuffs: allowed });
+      return;
+    }
+    if (!isHost) return;
+    await supabase.from('matches').update({ allow_debuffs: allowed }).eq('id', matchId);
+    set({ allowDebuffs: allowed });
+  },
   
   appendWords: async (count = 10) => {
     const { category, gameMode, challengeWords, matchId, isHost } = get();
@@ -173,6 +184,7 @@ const useMatchStore = create((set, get) => ({
         status: dbMatch.status,
         category: dbMatch.category,
         gameMode: dbMatch.game_mode,
+        allowDebuffs: dbMatch.allow_debuffs ?? true,
         roundNumber: dbMatch.round_number,
         challengeWords: dbMatch.challenge_words || [],
         localReady,
@@ -203,7 +215,8 @@ const useMatchStore = create((set, get) => ({
           status: 'waiting',
           challenge_words: initialWords,
           game_mode: get().gameMode,
-          category: get().category
+          category: get().category,
+          allow_debuffs: get().allowDebuffs !== undefined ? get().allowDebuffs : true
        }).select().single();
        
        if (error) throw error;
@@ -257,6 +270,26 @@ const useMatchStore = create((set, get) => ({
     const throttledStrike = throttle((char, combo) => {
       newChannel.send({ type: 'broadcast', event: 'keystroke_hit', payload: { id: myId, char, combo } });
     }, 30);
+    if (!window.__hasMatchUnloadListener) {
+      window.__hasMatchUnloadListener = true;
+      window.addEventListener('unload', () => {
+         const currentMatchId = get().matchId;
+         if (currentMatchId) {
+             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+             if (supabaseUrl && supabaseKey) {
+                 fetch(`${supabaseUrl}/rest/v1/matches?id=eq.${currentMatchId}`, {
+                     method: 'DELETE',
+                     headers: {
+                         'apikey': supabaseKey,
+                         'Authorization': `Bearer ${supabaseKey}`
+                     },
+                     keepalive: true
+                 }).catch(e => console.error(e));
+             }
+         }
+      });
+    }
 
     set({ _throttledBroadcast: throttledSend, _throttledStrikeBroadcast: throttledStrike, channel: newChannel, _dbSubscription: dbSub });
 
