@@ -456,8 +456,17 @@ const useMatchStore = create((set, get) => ({
          challenge_words: newWords,
          player1_ready: false,
          player2_ready: false,
-         status: 'preparing'
+         status: 'preparing',
+         winner_id: null
       }).eq('id', matchId);
+    }
+  },
+
+  updateMatchStatus: async (newStatus) => {
+    const { isHost, matchId } = get();
+    if (isHost && matchId) {
+      await supabase.from('matches').update({ status: newStatus }).eq('id', matchId);
+      // Local state will update via subscription
     }
   },
 

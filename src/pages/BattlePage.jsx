@@ -152,9 +152,14 @@ const BattlePage = () => {
   }, [status, winnerId, navigate, myId, battlePhase, endGame]);
 
   useEffect(() => {
-    if (status === 'countdown' && battlePhase === 'waiting') {
-      console.log('[BATTLE] DB reports BOTH READY → starting countdown!');
+    if ((status === 'countdown' || status === 'starting') && battlePhase === 'waiting') {
+      console.log('[BATTLE] DB reports starting -> entering countdown!');
       setBattlePhase('countdown');
+    } else if (status === 'playing' && battlePhase === 'waiting') {
+      // Late joiner, skip countdown
+      setBattlePhase('playing');
+      setStartTime(Date.now());
+      setIsMatchActive(true);
     }
   }, [status, battlePhase]);
 

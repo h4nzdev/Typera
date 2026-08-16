@@ -84,8 +84,8 @@ const CreateMatchPage = () => {
   }, []); // Run once on mount
 
   useEffect(() => {
-    if (status === 'starting' || status === 'preparing') {
-      navigate('/lobby');
+    if (status === 'starting') {
+      navigate('/battle');
     }
   }, [status, navigate]);
 
@@ -230,17 +230,30 @@ const CreateMatchPage = () => {
                     </div>
                   </div>
 
-                {/* Waiting indicator */}
+                {/* Status indicator & Start Button */}
                 <div className="border-t-2 pt-4 w-full flex flex-col items-center gap-4" style={{ borderColor: `${modeColor}30` }}>
-                  <div className="font-[family-name:var(--font-arcade)] text-base tracking-widest text-center"
-                    style={{ color: '#ff007f', textShadow: '0 0 8px rgba(255,0,127,0.6)' }}>
-                    WAITING FOR PLAYER 2{'.'?.repeat(dotCount) + ' '.repeat(3 - dotCount)}
-                  </div>
-                  <div className="w-full h-2 bg-black border border-white/10 overflow-hidden">
-                    <div className="h-full animate-[scan_1.5s_linear_infinite]"
-                      style={{ background: `linear-gradient(90deg, transparent, ${modeColor}, transparent)`, width: '40%' }} />
-                  </div>
-                  <ArcadeButton type="button" color="cyan" onClick={handleCancel} className="w-full text-xs py-2">
+                  {status === 'lobby' ? (
+                    <>
+                      <div className="font-[family-name:var(--font-arcade)] text-base tracking-widest text-center"
+                        style={{ color: '#ff007f', textShadow: '0 0 8px rgba(255,0,127,0.6)' }}>
+                        WAITING FOR PLAYER 2{'.'?.repeat(dotCount) + ' '.repeat(3 - dotCount)}
+                      </div>
+                      <div className="w-full h-2 bg-black border border-white/10 overflow-hidden">
+                        <div className="h-full animate-[scan_1.5s_linear_infinite]"
+                          style={{ background: `linear-gradient(90deg, transparent, ${modeColor}, transparent)`, width: '40%' }} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="font-[family-name:var(--font-arcade)] text-base tracking-widest text-center"
+                      style={{ color: '#39ff14', textShadow: '0 0 8px rgba(57,255,20,0.6)' }}>
+                      PLAYER 2 JOINED!
+                    </div>
+                  )}
+
+                  <ArcadeButton type="button" color="green" onClick={() => useMatchStore.getState().updateMatchStatus('starting')} className="w-full text-lg py-4 mt-2">
+                    START MATCH
+                  </ArcadeButton>
+                  <ArcadeButton type="button" color="cyan" onClick={handleCancel} className="w-full text-xs py-2 mt-2">
                     CANCEL MATCH
                   </ArcadeButton>
                 </div>
