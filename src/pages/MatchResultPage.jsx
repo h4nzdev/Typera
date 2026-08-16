@@ -40,6 +40,9 @@ const MatchResultPage = () => {
     if (status === 'cancelled' && matchData.mode !== 'solo') {
       leaveMatch();
       navigate('/');
+    } else if (status === 'preparing' && matchData.mode !== 'solo') {
+      // Host has started the next round
+      navigate('/battle');
     }
   }, [status, leaveMatch, navigate, matchData.mode]);
 
@@ -226,12 +229,18 @@ const MatchResultPage = () => {
             {/* BOOTH: intermediate round — NEXT ROUND + SURRENDER only */}
             {matchData.mode === 'classic_booth' && !isMatchOver && (
               <>
-                <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
-                  useMatchStore.getState().resetRound();
-                  navigate('/battle');
-                }} disabled={isSaving}>
-                  NEXT ROUND
-                </ArcadeButton>
+                {useMatchStore.getState().isHost ? (
+                  <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
+                    useMatchStore.getState().resetRound();
+                    navigate('/battle');
+                  }} disabled={isSaving}>
+                    NEXT ROUND
+                  </ArcadeButton>
+                ) : (
+                  <ArcadeButton color="cyan" className="whitespace-nowrap" disabled={true}>
+                    WAITING FOR HOST...
+                  </ArcadeButton>
+                )}
                 <ArcadeButton color="pink" className="whitespace-nowrap" onClick={handleExitMatch} disabled={isSaving}>
                   SURRENDER
                 </ArcadeButton>
@@ -240,17 +249,47 @@ const MatchResultPage = () => {
 
             {/* NON-BOOTH: Play Again / New Match / Leaderboard */}
             {matchData.mode !== 'classic_booth' && (
-              <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
-                if (matchData.mode === 'solo') {
-                  navigate('/practice');
-                } else {
-                  useMatchStore.getState().resetMatch();
-                  navigate('/battle');
-                }
-              }} disabled={isSaving}>
-                PLAY AGAIN
-              </ArcadeButton>
+              <>
+                {matchData.mode === 'solo' || useMatchStore.getState().isHost ? (
+                  <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
+                    if (matchData.mode === 'solo') {
+                      navigate('/practice');
+                    } else {
+                      useMatchStore.getState().resetMatch();
+                      navigate('/battle');
+                    }
+                  }} disabled={isSaving}>
+                    PLAY AGAIN
+                  </ArcadeButton>
+                ) : (
+                  <ArcadeButton color="cyan" className="whitespace-nowrap" disabled={true}>
+                    WAITING FOR HOST...
+                  </ArcadeButton>
+                )}
+              </>
             )}
+
+            {/* BOOTH: Final End of Match - NEW MATCH + LEADERBOARD */}
+            {matchData.mode === 'classic_booth' && isMatchOver && (
+              <>
+                {useMatchStore.getState().isHost ? (
+                  <ArcadeButton color="cyan" className="whitespace-nowrap" onClick={() => {
+                    useMatchStore.getState().resetMatch();
+                    navigate('/battle');
+                  }} disabled={isSaving}>
+                    PLAY AGAIN
+                  </ArcadeButton>
+                ) : (
+                  <ArcadeButton color="cyan" className="whitespace-nowrap" disabled={true}>
+                    WAITING FOR HOST...
+                  </ArcadeButton>
+                )}
+                <ArcadeButton color="pink" className="whitespace-nowrap" onClick={handleExitMatch} disabled={isSaving}>
+                  MAIN MENU
+                </ArcadeButton>
+              </>
+            )}
+
             {matchData.mode !== 'solo' && matchData.mode !== 'classic_booth' && (
               <>
                 <ArcadeButton color="pink" className="whitespace-nowrap" onClick={() => {
