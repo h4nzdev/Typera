@@ -394,9 +394,6 @@ const BattlePage = () => {
     setPressedKey(e.key);
     setTimeout(() => setPressedKey(null), 150);
 
-    // Trap word early rejection (if they are frozen/glitched from a trap, this catches it)
-    if (activeDebuff?.type === 'glitch' || activeDebuff?.type === 'freeze') return;
-
     const hasTypos = typed !== challengeText.slice(0, typed.length);
 
     if (e.key === 'Backspace') {
@@ -431,51 +428,11 @@ const BattlePage = () => {
       const nextChar = e.key;
       const expectedChar = challengeText[nextIndex];
 
-      const wordsBefore = (prev.match(/ /g) || []).length;
-      const currentWordObj = challengeWords[wordsBefore];
-      const isStartOfWord = prev === '' || prev.endsWith(' ');
-
-      // --- WORM (TRAP WORD) LOGIC ---
-      if (allowDebuffs && currentWordObj?.type === 'trap' && isStartOfWord) {
-         if (e.key === ' ') {
-            // Skip the trap successfully!
-            playSound('powerup');
-            const skipWord = currentWordObj.word;
-            let next = prev + skipWord;
-            // Add trailing space if not the last word
-            if (nextIndex + skipWord.length < challengeText.length) {
-                next += ' ';
-            }
-            
-            let correctCount = 0;
-            for (let i = 0; i < next.length; i++) {
-              if (next[i] === challengeText[i]) correctCount++;
-              else break;
-            }
-            const newProgress = Math.min(100, Math.round((correctCount / challengeText.length) * 100)) || 0;
-            broadcastStats({ progress: newProgress, wpm, accuracy, combo, damageDealt: localDamage });
-            return next;
-         } else if (e.key === expectedChar) {
-            // SPRUNG THE TRAP!
-            playSound('error');
-            triggerShake();
-            setCombo(0);
-            useMatchStore.getState().setActiveDebuff({ type: 'glitch', endsAt: Date.now() + 1500 });
-            setTimeout(() => {
-               if (useMatchStore.getState().activeDebuff?.type === 'glitch') {
-                   useMatchStore.getState().setActiveDebuff(null);
-               }
-            }, 1500);
-            statsRef.current.errors += 1;
-            return prev; // Block input
-         }
-      }
-
       let next = prev + nextChar;
       
-      let newWpm = wpm;
-      let newAcc = accuracy;
       let newCombo = combo;
+      let newAcc = accuracy;
+      let newWpm = wpm;
 
       if (nextChar !== expectedChar) {
         playSound('error');
