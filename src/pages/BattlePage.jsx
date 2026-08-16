@@ -45,7 +45,8 @@ const BattlePage = () => {
     winnerId,
     bossWordState,
     bossWordTriggered,
-    opponentStrikePulse
+    opponentStrikePulse,
+    bossWordWinner
   } = useMatchStore();
   
   const hostPlayer = players.find(p => p.isHost);
