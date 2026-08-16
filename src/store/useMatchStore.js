@@ -20,6 +20,8 @@ const generateChallenge = (count = 15, category = 'all', mode = 'race') => {
       else if (rand < 0.15) type = 'sword';
       else if (rand < 0.25) type = 'critical';
       else if (rand < 0.30) type = 'trap';
+    } else if (mode === 'classic_booth') {
+      if (rand < 0.12) type = 'critical';
     } else {
       if (rand < 0.12) type = 'critical';
       else if (rand < 0.17) type = 'trap';

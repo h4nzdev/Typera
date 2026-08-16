@@ -460,6 +460,11 @@ const BattlePage = () => {
             triggerShake();
             setCombo(0);
             useMatchStore.getState().setActiveDebuff({ type: 'glitch', endsAt: Date.now() + 1500 });
+            setTimeout(() => {
+               if (useMatchStore.getState().activeDebuff?.type === 'glitch') {
+                   useMatchStore.getState().setActiveDebuff(null);
+               }
+            }, 1500);
             statsRef.current.errors += 1;
             return prev; // Block input
          }
