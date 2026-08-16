@@ -41,7 +41,8 @@ const BattlePage = () => {
     channelState,
     roundNumber,
     allowDebuffs,
-    winnerId
+    winnerId,
+    opponentStrikePulse
   } = useMatchStore();
   
   const hostPlayer = players.find(p => p.isHost);
