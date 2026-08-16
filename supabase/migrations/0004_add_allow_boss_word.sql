@@ -1,0 +1,1 @@
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS allow_boss_word BOOLEAN DEFAULT true;

@@ -63,6 +63,8 @@ const useMatchStore = create((set, get) => ({
   activeDebuff: null,
   opponentDebuff: null,
   opponentStrikePulse: null,
+  allowDebuffs: true,
+  allowBossWord: true,
   localPoints: 0,
   opponentPoints: 0,
   winnerId: null,
@@ -155,6 +157,17 @@ const useMatchStore = create((set, get) => ({
     if (!isHost) return;
     await supabase.from('matches').update({ allow_debuffs: allowed }).eq('id', matchId);
     set({ allowDebuffs: allowed });
+  },
+
+  setAllowBossWord: async (allowed) => {
+    const { isHost, matchId } = get();
+    if (!matchId) {
+      set({ allowBossWord: allowed });
+      return;
+    }
+    if (!isHost) return;
+    await supabase.from('matches').update({ allow_boss_word: allowed }).eq('id', matchId);
+    set({ allowBossWord: allowed });
   },
   
   appendWords: async (count = 10) => {
@@ -264,7 +277,8 @@ const useMatchStore = create((set, get) => ({
           challenge_words: initialWords,
           game_mode: get().gameMode,
           category: get().category,
-          allow_debuffs: get().allowDebuffs !== undefined ? get().allowDebuffs : true
+          allow_debuffs: get().allowDebuffs !== undefined ? get().allowDebuffs : true,
+          allow_boss_word: get().allowBossWord !== undefined ? get().allowBossWord : true
        }).select().single();
        
        if (error) throw error;

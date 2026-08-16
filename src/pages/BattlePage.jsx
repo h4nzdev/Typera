@@ -46,6 +46,7 @@ const BattlePage = () => {
     bossWordState,
     bossWordTriggered,
     opponentStrikePulse,
+    allowBossWord,
     bossWordWinner
   } = useMatchStore();
   
@@ -580,7 +581,7 @@ const BattlePage = () => {
       });
       
       // Boss word trigger (Only Host triggers at 50%+)
-      if (isHost && newProgress >= 50 && !bossWordTriggered && matchCode !== 'SOLO') {
+      if (isHost && newProgress >= 50 && !bossWordTriggered && matchCode !== 'SOLO' && allowBossWord) {
          useMatchStore.getState().triggerBossWord("TELECOMMUNICATIONS");
       }
       
