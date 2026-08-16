@@ -11,7 +11,6 @@ import ArcadeButton from '../components/arcade/ArcadeButton';
 import PowerUpSlot from '../components/battle/PowerUpSlot';
 import DebuffBanner from '../components/battle/DebuffBanner';
 import ComboBanner from '../components/battle/ComboBanner';
-import TugOfWarOverlay from '../components/battle/TugOfWarOverlay';
 import { useNavigate } from 'react-router-dom';
 import useMatchStore from '../store/useMatchStore';
 import { playSound, playVoice, playBgm } from '../lib/sounds';
@@ -42,12 +41,7 @@ const BattlePage = () => {
     channelState,
     roundNumber,
     allowDebuffs,
-    winnerId,
-    bossWordState,
-    bossWordTriggered,
-    opponentStrikePulse,
-    allowBossWord,
-    bossWordWinner
+    winnerId
   } = useMatchStore();
   
   const hostPlayer = players.find(p => p.isHost);
@@ -249,40 +243,6 @@ const BattlePage = () => {
     }
   }, [status, battlePhase, endGame]);
 
-  // Handle Boss Word Winner Effect
-  useEffect(() => {
-    if (bossWordWinner !== null && battlePhase === 'playing') {
-       const didIWin = bossWordWinner === isHost;
-       if (didIWin) {
-          playVoice('powerup');
-          setTyped(prev => {
-             const remaining = challengeText.slice(prev.length);
-             const toAdd = remaining.slice(0, 15);
-             const next = prev + toAdd;
-             
-             let correctCount = 0;
-             for (let i = 0; i < next.length; i++) {
-               if (next[i] === challengeText[i]) correctCount++;
-               else break;
-             }
-             const newProgress = Math.min(100, Math.round((correctCount / challengeText.length) * 100)) || 0;
-             
-             // We can't access current wpm easily in this closure safely without it being a dependency,
-             // so we just read from the previous broadcast or omit them.
-             // But actually, we don't want to list them as dependencies because it would re-trigger.
-             // We can use a ref for latest wpm/accuracy/combo/damage if needed, or just let the next keystroke fix it.
-             // It's fine to just use the current closure values if we use refs, but let's just let it be.
-             // For now, we'll just let the next keystroke or interval update the broadcast.
-             useMatchStore.getState().broadcastStats({ progress: newProgress });
-             return next;
-          });
-       } else {
-          playSound('error');
-          triggerShake();
-       }
-    }
-  }, [bossWordWinner, battlePhase, challengeText, isHost, triggerShake]);
-
   // Handle Shield Interceptor for Incoming Debuffs
   useEffect(() => {
     if (activeDebuff && hasShield) {
@@ -329,8 +289,6 @@ const BattlePage = () => {
   }, [opponentStrikePulse, triggerShake]);
 
   const handleKeyDown = useCallback((e) => {
-    // If Boss Word is active, let the overlay handle inputs
-    if (bossWordState?.active) return;
     
     if (status !== 'playing') return; // The authoritative block!
     if (e.key === ' ') e.preventDefault();
@@ -378,12 +336,6 @@ const BattlePage = () => {
     }
 
     if (isCapsLock) return;
-
-    if (activeDebuff?.type === 'glitch' || activeDebuff?.type === 'freeze') {
-      playSound('error');
-      triggerShake();
-      return;
-    }
 
     if (isPaused) return;
     if (battlePhase !== 'playing') return;
@@ -537,11 +489,6 @@ const BattlePage = () => {
         activeDebuff
       });
       
-      // Boss word trigger (Only Host triggers at 50%+)
-      if (isHost && newProgress >= 50 && !bossWordTriggered && matchCode !== 'SOLO' && allowBossWord) {
-         useMatchStore.getState().triggerBossWord("TELECOMMUNICATIONS");
-      }
-      
       // Infinite append for deathmatch
       if (gameMode === 'deathmatch' && next.length > challengeText.length - 100) {
          useMatchStore.getState().appendWords(30);
@@ -682,7 +629,6 @@ const BattlePage = () => {
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden p-4 md:p-8 relative" style={{ background: 'radial-gradient(ellipse at center, rgba(10,0,21,0.4) 0%, rgba(5,5,10,0.72) 100%)' }}>
-      {bossWordState?.active && <TugOfWarOverlay />}
       {isTrueSuddenDeath && (
         <div className="absolute inset-0 pointer-events-none bg-red-900/20 z-[100] animate-pulse flex flex-col items-center justify-center">
              <ArcadeText color="red" glow className="text-6xl tracking-widest absolute top-1/4">SUDDEN DEATH</ArcadeText>

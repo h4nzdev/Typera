@@ -62,13 +62,9 @@ const useMatchStore = create((set, get) => ({
   opponentDebuff: null,
   opponentStrikePulse: null,
   allowDebuffs: true,
-  allowBossWord: true,
   localPoints: 0,
   opponentPoints: 0,
   winnerId: null,
-  bossWordState: null, // { word, p1Progress, p2Progress, active }
-  bossWordTriggered: false,
-  bossWordWinner: null, // true if isHost won, false if challenger won
 
   _throttledBroadcast: null,
   _throttledStrikeBroadcast: null,
@@ -94,34 +90,6 @@ const useMatchStore = create((set, get) => ({
     }
   },
 
-  triggerBossWord: (word) => {
-    const { channel } = get();
-    if (channel) {
-       channel.send({ type: 'broadcast', event: 'boss_word_start', payload: { word } });
-       set({ bossWordState: { word, p1Progress: 0, p2Progress: 0, active: true }, bossWordTriggered: true });
-    }
-  },
-
-  updateBossWordProgress: (progress) => {
-    const { channel, isHost } = get();
-    if (channel) {
-       channel.send({ type: 'broadcast', event: 'boss_word_progress', payload: { progress, isHost } });
-       set(state => ({
-         bossWordState: state.bossWordState ? {
-           ...state.bossWordState,
-           [isHost ? 'p1Progress' : 'p2Progress']: progress
-         } : null
-       }));
-    }
-  },
-
-  winBossWord: () => {
-    const { channel, isHost } = get();
-    if (channel) {
-       channel.send({ type: 'broadcast', event: 'boss_word_win', payload: { isHost } });
-       set({ bossWordState: null, bossWordWinner: isHost });
-    }
-  },
 
   setCategory: async (category) => {
     const { isHost, matchId, gameMode } = get();
@@ -157,16 +125,7 @@ const useMatchStore = create((set, get) => ({
     set({ allowDebuffs: allowed });
   },
 
-  setAllowBossWord: async (allowed) => {
-    const { isHost, matchId } = get();
-    if (!matchId) {
-      set({ allowBossWord: allowed });
-      return;
-    }
-    if (!isHost) return;
-    await supabase.from('matches').update({ allow_boss_word: allowed }).eq('id', matchId);
-    set({ allowBossWord: allowed });
-  },
+
   
   appendWords: async (count = 10) => {
     const { category, gameMode, challengeWords, matchId, isHost } = get();
@@ -371,26 +330,7 @@ const useMatchStore = create((set, get) => ({
           set({ opponentStrikePulse: { ts: Date.now(), char: payload.payload.char, combo: payload.payload.combo, isOverload: payload.payload.options?.isOverload } });
         }
       })
-      .on('broadcast', { event: 'boss_word_start' }, (payload) => {
-        if (!get().isHost) {
-           set({ bossWordState: { word: payload.payload.word, p1Progress: 0, p2Progress: 0, active: true }, bossWordTriggered: true });
-        }
-      })
-      .on('broadcast', { event: 'boss_word_progress' }, (payload) => {
-         const { isHost: senderIsHost, progress } = payload.payload;
-         if (senderIsHost !== get().isHost) {
-           set(state => ({
-             bossWordState: state.bossWordState ? {
-               ...state.bossWordState,
-               [senderIsHost ? 'p1Progress' : 'p2Progress']: progress
-             } : null
-           }));
-         }
-      })
-      .on('broadcast', { event: 'boss_word_win' }, (payload) => {
-         const { isHost: winnerIsHost } = payload.payload;
-         set({ bossWordState: null, bossWordWinner: winnerIsHost });
-      })
+
       .on('broadcast', { event: 'stats_update' }, (payload) => {
         if (payload.payload.id !== get().myId) {
           set({ opponentStats: payload.payload.stats });
@@ -429,7 +369,7 @@ const useMatchStore = create((set, get) => ({
   resetRound: async () => {
     const { isHost, matchId, category, gameMode, roundNumber } = get();
     const nextRound = roundNumber + 1;
-    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 }, bossWordTriggered: false, bossWordState: null, bossWordWinner: null });
+    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 } });
     
     if (isHost && matchId) {
       const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
@@ -445,7 +385,7 @@ const useMatchStore = create((set, get) => ({
 
   resetMatch: async () => {
     const { isHost, matchId, category, gameMode } = get();
-    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 }, localPoints: 0, opponentPoints: 0, bossWordTriggered: false, bossWordState: null, bossWordWinner: null });
+    set({ opponentStats: { progress: 0, wpm: 0, accuracy: 100, combo: 0, hp: 1000 }, localPoints: 0, opponentPoints: 0 });
     
     if (isHost && matchId) {
       const newWords = generateChallenge(gameMode === 'deathmatch' ? 30 : 15, category, gameMode);
