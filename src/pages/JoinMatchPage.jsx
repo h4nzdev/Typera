@@ -39,8 +39,7 @@ const JoinMatchPage = () => {
   }, []);
 
   useEffect(() => {
-    if (status === 'starting' || status === 'playing') navigate('/battle');
-    else if (status === 'preparing') navigate('/lobby');
+    if (status === 'starting' || status === 'preparing') navigate('/lobby');
   }, [status, navigate]);
 
   const handleJoin = async (e) => {

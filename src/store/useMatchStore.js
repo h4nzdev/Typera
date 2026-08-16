@@ -462,14 +462,6 @@ const useMatchStore = create((set, get) => ({
     }
   },
 
-  updateMatchStatus: async (newStatus) => {
-    const { isHost, matchId } = get();
-    if (isHost && matchId) {
-      await supabase.from('matches').update({ status: newStatus }).eq('id', matchId);
-      // Local state will update via subscription
-    }
-  },
-
   broadcastStats: (stats) => {
     const { _throttledBroadcast } = get();
     if (_throttledBroadcast) _throttledBroadcast(stats);
